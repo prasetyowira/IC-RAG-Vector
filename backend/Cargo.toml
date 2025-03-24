@@ -26,7 +26,6 @@ ic-cdk-macros = "0.17.1"
 serde = "1"
 rag-toolchain = "0.1.9"
 ic-stable-structures = "0.6.0"
-space = { version = "0.17.0", default-features = false, features = ["alloc"] }
 thiserror = "1.0.40"
 ciborium = "0.2.1"
 serde_bytes = "0.11.17"

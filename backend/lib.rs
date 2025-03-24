@@ -306,6 +306,7 @@ fn validate_link(link: String) -> bool {
 }
 
 
+// skip this feature for now
 // async fn download_file_from_link(link: String) -> Result<String, Error> {
 //     // First validate the link
 //     if !validate_link(link.clone()) {
