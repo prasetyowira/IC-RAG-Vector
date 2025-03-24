@@ -141,14 +141,13 @@ async fn update_document(
         }
         
         // Check if the file exists in the collection
-        let docs = match db.get_docs(&name) {
-            Ok(docs) => docs,
-            Err(_) => return Err(Error::NotFound),
-        };
-        
-        if (!docs.contains(&filename)) {
+        let docs = db.get_docs_by_query(&name, CollectionQuery {
+            file_name: Some(filename.clone()),
+        })?;
+        if docs.is_empty() {
             return Err(Error::NotFound);
         }
+
         
         // Remove old document
         db.remove_document_from_collection(&name, &filename)?;

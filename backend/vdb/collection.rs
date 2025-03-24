@@ -68,11 +68,27 @@ impl Collection {
         }
     }
 
-    / Method baru untuk mencari dokumen berdasarkan metadata
+    // Method baru untuk mencari dokumen berdasarkan metadata
     pub fn find(&self, query: CollectionQuery) -> Vec<Document> {
         let mut results = Vec::new();
         
-        
+        for (file_name, doc_metadata) in &self.metadata.docs {
+            if query.title.is_some() && doc_metadata.title != query.title.unwrap() {
+                continue;
+            }
+            if query.file_name.is_some() && file_name != &query.file_name.unwrap() {
+                continue;
+            }
+            if query.file_type.is_some() && doc_metadata.file_type != query.file_type.unwrap() {
+                continue;
+            }
+            if query.date_from.is_some() && doc_metadata.created_at < query.date_from.unwrap() {
+                continue;
+            }
+            if query.date_to.is_some() && doc_metadata.created_at > query.date_to.unwrap() {
+                continue;
+            }
+            results.push(doc_metadata.clone());
         }
         
         results

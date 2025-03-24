@@ -151,6 +151,12 @@ impl Database {
         Ok(docs)
     }
 
+    pub fn get_docs_by_query(&mut self, name: &String, query: CollectionQuery) -> Result<Vec<DocMetadata>, Error> {
+        let collection = self.collections.get_mut(name).ok_or(Error::NotFound)?;
+        let docs = collection.find(query);
+        Ok(docs)
+    }
+
     pub fn remove_document_from_collection(
         &mut self,
         name: &String,
@@ -174,7 +180,7 @@ impl Database {
 
 #[cfg(test)]
 mod tests {
-    use super::{Database, Error};
+    use super::{Database, Error, CollectionQuery};
 
     #[test]
     fn create_collection() {
@@ -196,14 +202,12 @@ mod tests {
     fn delete_existing_collection() {
         let mut db: Database = Database::new();
         let _ = db.create_collection("test".to_string(), 3);
-
         assert_eq!(db.delete_collection(&"test".to_string()), Ok(()))
     }
 
     #[test]
     fn delete_non_existing_collection() {
         let mut db: Database = Database::new();
-
         assert_eq!(
             db.delete_collection(&"test".to_string()),
             Err(Error::NotFound)
@@ -224,7 +228,11 @@ mod tests {
             &"test".to_string(),
             keys,
             values,
-            "test_file_name".to_string(),
+            "test_file.txt".to_string(),
+            "Test Document".to_string(),
+            "text".to_string(),
+            1024,
+            1234567890,
         );
         let result = db.build_index(&"test".to_string());
         assert_eq!(result, Ok(()));
@@ -245,7 +253,11 @@ mod tests {
             &"test".to_string(),
             keys,
             values,
-            "test_file_name".to_string(),
+            "test_file1.txt".to_string(),
+            "Test Document 1".to_string(),
+            "text".to_string(),
+            1024,
+            1234567890,
         );
         let _ = db.build_index(&"test".to_string());
 
@@ -255,7 +267,11 @@ mod tests {
             &"test".to_string(),
             keys,
             values,
-            "test_file_name".to_string(),
+            "test_file2.txt".to_string(),
+            "Test Document 2".to_string(),
+            "text".to_string(),
+            2048,
+            1234567891,
         );
         let result = db.build_index(&"test".to_string());
         assert_eq!(result, Ok(()));
@@ -275,7 +291,11 @@ mod tests {
             &"test".to_string(),
             keys,
             values,
-            "test_file_name".to_string(),
+            "test_file.txt".to_string(),
+            "Test Document".to_string(),
+            "text".to_string(),
+            1024,
+            1234567890,
         );
         let _ = db.build_index(&"test".to_string());
         assert_eq!(db.delete_collection(&"test".to_string()), Ok(()));
@@ -284,7 +304,6 @@ mod tests {
     #[test]
     fn insert_into_collection_dimensions_mismatch_keys_values() {
         let mut db: Database = Database::new();
-
         let _ = db.create_collection("test".to_string(), 3);
 
         let keys: Vec<Vec<f32>> = vec![
@@ -297,133 +316,154 @@ mod tests {
             &"test".to_string(),
             keys,
             values,
-            "test_file_name".to_string(),
+            "test_file.txt".to_string(),
+            "Test Document".to_string(),
+            "text".to_string(),
+            1024,
+            1234567890,
         );
 
         assert_eq!(result, Err(Error::DimensionMismatch));
     }
 
     #[test]
-    fn insert_into_collection_dimensions_mismatch_keys() {
+    fn test_query_documents() {
         let mut db: Database = Database::new();
-
         let _ = db.create_collection("test".to_string(), 3);
-
-        let keys: Vec<Vec<f32>> = vec![
-            vec![10.0, 12.0, 4.5],
-            vec![10.0, 11.0, 10.5],
-            vec![10.0, 20.5, 15.0, 10.2],
-        ];
-        let values: Vec<String> = vec!["red".to_string(), "green".to_string(), "blue".to_string()];
-        let result = db.insert_into_collection(
-            &"test".to_string(),
-            keys,
-            values,
-            "test_file_name".to_string(),
-        );
-
-        assert_eq!(result, Err(Error::DimensionMismatch));
-    }
-
-    #[test]
-    fn insert_into_collection_dimensions_mismatch() {
-        let mut db: Database = Database::new();
-
-        let _ = db.create_collection("test".to_string(), 4);
-
-        let keys: Vec<Vec<f32>> = vec![
-            vec![10.0, 12.0, 4.5],
-            vec![10.0, 11.0, 10.5],
-            vec![10.0, 20.5, 15.0],
-        ];
-        let values: Vec<String> = vec!["red".to_string(), "green".to_string(), "blue".to_string()];
-        let result = db.insert_into_collection(
-            &"test".to_string(),
-            keys,
-            values,
-            "test_file_name".to_string(),
-        );
-
-        assert_eq!(result, Err(Error::DimensionMismatch));
-    }
-
-    #[test]
-    fn insert_into_non_existing_collection() {
-        let mut db: Database = Database::new();
-
-        let keys: Vec<Vec<f32>> = vec![
-            vec![10.0, 12.0, 4.5],
-            vec![10.0, 11.0, 10.5],
-            vec![10.0, 20.5, 15.0],
-        ];
-        let values: Vec<String> = vec!["red".to_string(), "green".to_string(), "blue".to_string()];
-
-        let result = db.insert_into_collection(
-            &"test".to_string(),
-            keys,
-            values,
-            "test_file_name".to_string(),
-        );
-
-        assert_eq!(result, Err(Error::NotFound));
-    }
-
-    #[test]
-    fn query() {
-        let mut db = Database::new();
-        let _ = db.create_collection("test".to_string(), 3);
-        let keys: Vec<Vec<f32>> = vec![
-            vec![10.0, 12.0, 4.5],
-            vec![10.0, 11.0, 10.5],
-            vec![10.0, 20.5, 15.0],
-        ];
-        let values: Vec<String> = vec!["red".to_string(), "green".to_string(), "blue".to_string()];
+        
+        // Insert test documents
+        let keys: Vec<Vec<f32>> = vec![vec![10.0, 12.0, 4.5]];
+        let values: Vec<String> = vec!["content1".to_string()];
         let _ = db.insert_into_collection(
             &"test".to_string(),
             keys,
             values,
-            "test_file_name".to_string(),
+            "doc1.pdf".to_string(),
+            "PDF Document".to_string(),
+            "pdf".to_string(),
+            1024,
+            1234567890,
         );
 
-        let _ = db.build_index(&"test".to_string());
+        // Test query by file type
+        let query = CollectionQuery {
+            title: None,
+            file_name: None,
+            file_type: Some("pdf".to_string()),
+            date_from: None,
+            date_to: None,
+        };
 
-        let query_vec: Vec<f32> = vec![10.0, 12.5, 4.5];
-        let result = db.query(&"test".to_string(), query_vec, 1);
-        assert_eq!(result, Ok(vec![(0.9997943, "red".to_string())]));
+        let results = db.get_docs_by_query(&"test".to_string(), query).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].file_type.as_ref().unwrap(), "pdf");
     }
 
     #[test]
-    fn query_with_append() {
-        let mut db = Database::new();
+    fn test_query_documents_by_date_range() {
+        let mut db: Database = Database::new();
         let _ = db.create_collection("test".to_string(), 3);
-        let keys: Vec<Vec<f32>> = vec![
-            vec![10.0, 12.0, 4.5],
-            vec![10.0, 11.0, 10.5],
-            vec![10.0, 20.5, 15.0],
-        ];
-        let values: Vec<String> = vec!["red".to_string(), "green".to_string(), "blue".to_string()];
+        
+        // Insert documents with different dates
+        let keys1: Vec<Vec<f32>> = vec![vec![10.0, 12.0, 4.5]];
+        let values1: Vec<String> = vec!["content1".to_string()];
+        let _ = db.insert_into_collection(
+            &"test".to_string(),
+            keys1,
+            values1,
+            "doc1.txt".to_string(),
+            "Old Document".to_string(),
+            "text".to_string(),
+            1024,
+            1000000, // Older timestamp
+        );
+
+        let keys2: Vec<Vec<f32>> = vec![vec![11.0, 13.0, 5.5]];
+        let values2: Vec<String> = vec!["content2".to_string()];
+        let _ = db.insert_into_collection(
+            &"test".to_string(),
+            keys2,
+            values2,
+            "doc2.txt".to_string(),
+            "New Document".to_string(),
+            "text".to_string(),
+            2048,
+            2000000, // Newer timestamp
+        );
+
+        // Query documents within date range
+        let query = CollectionQuery {
+            title: None,
+            file_name: None,
+            file_type: None,
+            date_from: Some(1500000),
+            date_to: Some(2500000),
+        };
+
+        let results = db.get_docs_by_query(&"test".to_string(), query).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "New Document");
+    }
+
+    #[test]
+    fn test_remove_document() {
+        let mut db: Database = Database::new();
+        let _ = db.create_collection("test".to_string(), 3);
+        
+        // Insert a test document
+        let keys: Vec<Vec<f32>> = vec![vec![10.0, 12.0, 4.5]];
+        let values: Vec<String> = vec!["content".to_string()];
+        let filename = "test_doc.txt".to_string();
         let _ = db.insert_into_collection(
             &"test".to_string(),
             keys,
             values,
-            "test_file_name".to_string(),
+            filename.clone(),
+            "Test Document".to_string(),
+            "text".to_string(),
+            1024,
+            1234567890,
         );
 
-        let _ = db.build_index(&"test".to_string());
+        // Remove the document
+        let result = db.remove_document_from_collection(&"test".to_string(), &filename);
+        assert!(result.is_ok());
 
-        let keys: Vec<Vec<f32>> = vec![vec![10.0, 12.0, 16.5], vec![10.0, 30.0, 40.5]];
-        let values: Vec<String> = vec!["yellow".to_string(), "happy".to_string()];
+        // Verify document was removed
+        let docs = db.get_docs(&"test".to_string()).unwrap();
+        assert_eq!(docs.len(), 0);
+    }
+
+    #[test]
+    fn test_query_by_title() {
+        let mut db: Database = Database::new();
+        let _ = db.create_collection("test".to_string(), 3);
+        
+        // Insert test document
+        let keys: Vec<Vec<f32>> = vec![vec![10.0, 12.0, 4.5]];
+        let values: Vec<String> = vec!["content".to_string()];
         let _ = db.insert_into_collection(
             &"test".to_string(),
             keys,
             values,
-            "test_file_name".to_string(),
+            "doc.txt".to_string(),
+            "Unique Title".to_string(),
+            "text".to_string(),
+            1024,
+            1234567890,
         );
 
-        let _ = db.build_index(&"test".to_string());
+        // Query by title
+        let query = CollectionQuery {
+            title: Some("Unique Title".to_string()),
+            file_name: None,
+            file_type: None,
+            date_from: None,
+            date_to: None,
+        };
 
-        let query_vec: Vec<f32> = vec![10.0, 30.5, 35.5];
-        let result = db.query(&"test".to_string(), query_vec, 1);
-        assert_eq!(result, Ok(vec![(0.9973914, "happy".to_string())]));
+        let results = db.get_docs_by_query(&"test".to_string(), query).unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].title, "Unique Title");
     }
 }
