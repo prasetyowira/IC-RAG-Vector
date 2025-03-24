@@ -72,21 +72,6 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
         return Err(Error::FileTypeNotSupported)
     }
 
-    // check if collection exists, if not create new collection
-    // DB.with(|db| {
-    //     let mut db = db.borrow_mut();
-    //     if !db.collections.contains_key(&collection_name) {
-    //         db.create_collection(collection_name.clone(), 1000)
-    //     }
-    // });
-
-    // if !DB.with(|db| db.borrow().collections.contains_key(&collection_name)) {
-    //     DB.with(|db| {
-    //         let mut db = db.borrow_mut();
-    //         db.create_collection(name, dimension)
-    //     })
-    // }
-
     // Convert ByteBuf to UTF-8 string with proper error handling
     let content_str = match String::from_utf8(content.to_vec()) {
         Ok(content) => content,
