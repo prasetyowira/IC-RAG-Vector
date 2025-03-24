@@ -1,56 +1,31 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+# Various IDEs and Editors
+.vscode/
+.idea/
+**/*~
 
-    <link rel="dns-prefetch" href="https://ipc.ninja" />
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="https://fonts.gstatic.com" crossorigin />
+# Mac OSX temporary files
+.DS_Store
+**/.DS_Store
 
-    <link
-      rel="preload"
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&display=swap"
-      as="style"
-    />
-    <link rel="preload" href="/assets/fonts/CircularXXWeb-Medium.woff" as="font" type="font/woff" crossorigin />
-    <link rel="preload" href="/assets/fonts/CircularXXWeb-Bold.woff" as="font" type="font/woff" crossorigin />
-    <link rel="preload" href="/assets/fonts/CircularXXWeb-Book.woff" as="font" type="font/woff" crossorigin />
+# dfx temporary files
+.dfx/
 
-    <link rel="canonical" href="https://icp.ninja" />
+# generated files
+**/declarations/
 
-    <title>ICP Ninja</title>
-    <link rel="icon" href="/favicon.ico" />
-    <meta
-      name="description"
-      content="ICP Ninja is a browser IDE for creating Internet Computer (ICP) smart contracts. Write and deploy entire applications directly onchain from the browser. Choose from a gallery of example projects to get started."
-    />
+# rust
+target/
 
-    <meta name="version" content="185356b701166879911a5c8b80eeeb1f1f783f89" />
+# frontend code
+node_modules/
+dist/
+.svelte-kit/
 
-    <meta property="og:title" content="ICP Ninja" />
-    <meta
-      property="og:description"
-      content="ICP Ninja is a browser IDE for creating Internet Computer (ICP) smart contracts. Write and deploy entire applications directly onchain from the browser. Choose from a gallery of example projects to get started."
-    />
-    <meta property="og:image" content="/open-graph.png" />
-    <meta property="og:url" content="https://icp.ninja" />
-    <meta property="og:type" content="website" />
-    <meta property="og:locale" content="en_GB" />
+# environment variables
+.env
+.cursor
 
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="ICP Ninja" />
-    <meta
-      name="twitter:description"
-      content="ICP Ninja is a browser IDE for creating Internet Computer (ICP) smart contracts. Write and deploy entire applications directly onchain from the browser. Choose from a gallery of example projects to get started."
-    />
-    <meta name="twitter:image" content="/open-graph.png" />
-    <script type="module" crossorigin src="/assets/index-BrBjFGrV.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-h86_PBWe.css">
-  </head>
-
-  <body>
-    <div id="root"></div>
-  </body>
-</html>
+# frontend code
+IC-RAG-Vector/frontend/node_modules/
+IC-RAG-Vector/frontend/dist/
+IC-RAG-Vector/frontend/.svelte-kit/
