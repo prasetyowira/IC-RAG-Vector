@@ -1,4 +1,4 @@
-use super::collection::{Collection, DocMetadata};
+use super::collection::{Collection, DocMetadata, CollectionQuery};
 use super::error::Error;
 use super::index::Vector;
 // use super::memory::Memory;
@@ -144,14 +144,14 @@ impl Database {
             return Err(Error::NotFound);
         }
 
-        // Convert the HashSet to a sorted Vec for consistent ordering across calls
-        let mut docs: Vec<DocMetadata> = Vec::from_iter(collection.metadata.docs.clone());
+        // Convert the HashMap values to a Vec
+        let mut docs: Vec<DocMetadata> = collection.metadata.docs.values().cloned().collect();
         docs.sort_by_key(|doc| doc.created_at);
 
         Ok(docs)
     }
 
-    pub fn get_docs_by_query(&mut self, name: &String, query: CollectionQuery) -> Result<Vec<DocMetadata>, Error> {
+    pub fn get_docs_by_query(&mut self, name: &String, query: CollectionQuery) -> Result<Vec<&DocMetadata>, Error> {
         let collection = self.collections.get_mut(name).ok_or(Error::NotFound)?;
         let docs = collection.find(query);
         Ok(docs)

@@ -1,15 +1,17 @@
 use super::index::{generate_index, Vector};
+use candid::{CandidType};
 use ciborium::de;
 use ic_stable_structures::{storable::Bound, Storable};
 use instant_distance::{HnswMap, Search};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::{collections::{HashSet, HashMap}, usize};
+use std::clone::Clone;
+use std::{collections::HashMap, usize};
 
-#[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Debug)]
+#[derive(CandidType, Clone, Serialize, Deserialize, Hash, Eq, PartialEq, Debug)]
 pub struct DocMetadata {
     pub title: String,
-    pub file_names: String,
+    pub file_name: String,
     pub file_type: Option<String>,
     pub file_size: u64,
     pub created_at: u64,
@@ -25,7 +27,7 @@ pub struct Metadata {
 #[derive(Serialize, Deserialize)]
 pub struct Collection {
     pub dimension: usize,
-    pub mut metadata: Metadata,
+    pub metadata: Metadata,
     inner: HnswMap<Vector, String>,
     keys: Vec<Vector>,
     values: Vec<String>,
@@ -63,23 +65,26 @@ impl Collection {
             inner: generate_index(keys, values),
             dimension,
             metadata: Metadata {
+                count: 0,
+                created_at: ic_cdk::api::time(),
                 docs: HashMap::new(),
             },
         }
     }
 
     // Method baru untuk mencari dokumen berdasarkan metadata
-    pub fn find(&self, query: CollectionQuery) -> Vec<Document> {
+    pub fn find(&self, query: CollectionQuery) -> Vec<&DocMetadata> {
         let mut results = Vec::new();
-        
+
         for (file_name, doc_metadata) in &self.metadata.docs {
-            if query.title.is_some() && doc_metadata.title != query.title.unwrap() {
+            // Check if all the specified query conditions match
+            if query.title.is_some() && &doc_metadata.title != query.title.as_ref().unwrap() {
                 continue;
             }
-            if query.file_name.is_some() && file_name != &query.file_name.unwrap() {
+            if query.file_name.is_some() && file_name != query.file_name.as_ref().unwrap() {
                 continue;
             }
-            if query.file_type.is_some() && doc_metadata.file_type != query.file_type.unwrap() {
+            if query.file_type.is_some() && doc_metadata.file_type.as_ref() != query.file_type.as_ref() {
                 continue;
             }
             if query.date_from.is_some() && doc_metadata.created_at < query.date_from.unwrap() {
@@ -88,14 +93,12 @@ impl Collection {
             if query.date_to.is_some() && doc_metadata.created_at > query.date_to.unwrap() {
                 continue;
             }
-            results.push(doc_metadata.clone());
-        }
-        
-        results
-    }
 
-    pub fn contains_key(&self, key: &String) -> bool {
-        self.metadata.docs.contains_key(key)
+            // Add a reference to the matching document
+            results.push(doc_metadata);
+        }
+
+        results
     }
 
     pub fn append(
@@ -111,16 +114,17 @@ impl Collection {
         if keys.len() != values.len() {
             return Err(String::from("length of keys not eq to values'"));
         }
+        let f_name = file_name.clone();
         self.keys.append(keys);
         self.values.append(values);
         let docs_metadata = DocMetadata {
             title,
             file_name,
-            file_type,
+            file_type: Some(file_type),
             file_size,
             created_at,
         };
-        self.metadata.docs.insert(file_name, docs_metadata);
+        self.metadata.docs.insert(f_name, docs_metadata);
         self.metadata.count += 1;
 
         Ok(())

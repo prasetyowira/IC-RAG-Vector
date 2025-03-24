@@ -14,6 +14,8 @@ pub enum Error {
     MemoryError,
     #[error("invalid input")]
     InvalidInput,
+    #[error("file type not supported")]
+    FileTypeNotSupported,
     #[error("vector db error")]
     DBError,
 }

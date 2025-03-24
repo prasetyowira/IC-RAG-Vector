@@ -1,15 +1,9 @@
 use candid::Principal;
 mod vdb;
 
-use std::any::Any;
 use std::num::NonZeroU32;
 use candid::{CandidType};
 use ic_cdk_macros::{query, update};
-use ic_stable_structures::{
-    memory_manager::{VirtualMemory},
-    DefaultMemoryImpl,
-    Memory as _,
-};
 use rag_toolchain::{
     clients::OpenAIChatCompletionClient,
     clients::OpenAIModel::{Gpt3Point5Turbo},
@@ -17,17 +11,15 @@ use rag_toolchain::{
     chains::{BasicRAGChain},
     common::Chunk
 };
-use space::{Metric};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
+use url::Url;
 use vdb::db::DB;
-use vdb::collection::DocMetadata;
+use vdb::collection::{DocMetadata, CollectionQuery};
 use vdb::error::Error;
 use vdb::embedding::{Embedding, embed_content};
 use vdb::retriever::VectorDBRetriever;
 
-
-type Memory = VirtualMemory<DefaultMemoryImpl>;
 type FileId = String;
 
 #[derive(Clone, CandidType, Serialize, Deserialize)]
@@ -60,11 +52,11 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
     // user principal id as collection name
     let collection_name = user.to_string();
 
-    let mut content = data.clone();
+    let content = data.clone();
 
     // Check if file_type is valid, only pdf, txt, and valid public link are allowed
     if file_type != "pdf" && file_type != "txt" && file_type != "link" {
-        return Err(Error::InvalidInput);
+        return Err(Error::FileTypeNotSupported);
     }
 
     // if file_type is link, validate the link
@@ -72,18 +64,28 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
         // change data to link
         let link = String::from_utf8(content.clone().to_vec()).unwrap();
 
-        if !validate_link(link) {
+        if !validate_link(link.clone()) {
             return Err(Error::InvalidInput);
         }
 
-        let result = download_file_from_link(link).await?;
-        content = ByteBuf::from(result);
+        // return error invalid input with message, "currently not supported"
+        return Err(Error::FileTypeNotSupported)
     }
 
     // check if collection exists, if not create new collection
-    if !DB.with(|db| db.borrow().collections.contains_key(&collection_name)) {
-        create_collection(collection_name.clone(), 1536).await?;
-    }
+    // DB.with(|db| {
+    //     let mut db = db.borrow_mut();
+    //     if !db.collections.contains_key(&collection_name) {
+    //         db.create_collection(collection_name.clone(), 1000)
+    //     }
+    // });
+
+    // if !DB.with(|db| db.borrow().collections.contains_key(&collection_name)) {
+    //     DB.with(|db| {
+    //         let mut db = db.borrow_mut();
+    //         db.create_collection(name, dimension)
+    //     })
+    // }
 
     // Convert ByteBuf to UTF-8 string with proper error handling
     let content_str = match String::from_utf8(content.to_vec()) {
@@ -100,6 +102,11 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
     // Insert into collection with proper error handling
     DB.with(|db| {
         let mut db = db.borrow_mut();
+        let exist = db.collections.contains_key(&collection_name);
+        if !exist {
+            db.create_collection(collection_name.clone(), 1000).unwrap();
+        }
+
         
         // Insert the document and handle error
         match db.insert_into_collection(&collection_name, vec![embedding], vec![content_str], filename.clone(), title, file_type, file_size, created_at) {
@@ -116,7 +123,7 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
 // --- UPDATE + RE-EMBED ---
 #[update]
 async fn update_document(
-    filename: String, data: ByteBuf
+    file_type: String, title: String, filename: String, data: ByteBuf
 ) -> Result<String, Error> {
     // get user from ic_cdk::caller()
     let user = ic_cdk::caller();
@@ -127,6 +134,8 @@ async fn update_document(
     // user principal id as collection name
     let name = user.to_string();
 
+    let file_size = data.len() as u64;
+    let created_at = ic_cdk::api::time();
     let content_str = String::from_utf8(data.to_vec()).unwrap();
     //chunked content
     let chunk = Chunk::new(content_str.clone());
@@ -136,13 +145,17 @@ async fn update_document(
         let mut db = db.borrow_mut();
         
         // Check if the collection exists
-        if (!db.collections.contains_key(&name)) {
+        if !db.collections.contains_key(&name) {
             return Err(Error::NotFound);
         }
         
         // Check if the file exists in the collection
         let docs = db.get_docs_by_query(&name, CollectionQuery {
+            title: None,
             file_name: Some(filename.clone()),
+            file_type: None,
+            date_from: None,
+            date_to: None,
         })?;
         if docs.is_empty() {
             return Err(Error::NotFound);
@@ -153,7 +166,13 @@ async fn update_document(
         db.remove_document_from_collection(&name, &filename)?;
         
         // Insert updated document
-        db.insert_into_collection(&name, vec![embedding], vec![content_str.clone()], filename.clone(), title, file_type, file_size, created_at)?;
+        db.insert_into_collection(
+            &name,
+            vec![embedding],
+            vec![content_str.clone()],
+            filename.clone(),
+            title, file_type, file_size, created_at
+        )?;
         
         // Rebuild index
         db.build_index(&name)?;
@@ -301,11 +320,73 @@ fn validate_link(link: String) -> bool {
     url.is_ok()
 }
 
-async fn download_file_from_link(link: String) -> Result<String, Error> {
-    let response = reqwest::get(link).await?;
-    let content = response.text().await?;
-    Ok(content)
-}
+
+// async fn download_file_from_link(link: String) -> Result<String, Error> {
+//     // First validate the link
+//     if !validate_link(link.clone()) {
+//         return Err(Error::InvalidLink(format!("Invalid link: {}", link)));
+//     }
+//
+//     // Define request headers - using standard headers for GET request
+//     let request_headers = vec![
+//         ("Accept", "text/plain,application/json"),
+//         ("User-Agent", "IC-Agent"),
+//     ];
+//
+//     // Current time as nanoseconds, used for cycles calculation
+//     let now = SystemTime::now()
+//         .duration_since(UNIX_EPOCH)
+//         .unwrap()
+//         .as_nanos();
+//
+//     // Make the HTTP request
+//     // Documentation suggests a minimum of 49M cycles for a simple GET request
+//     let cycles = 100_000_000; // Using 100M cycles to ensure we have enough
+//
+//     let request = http_request(
+//         {
+//             HttpRequest {
+//                 url: link.clone(),
+//                 method: "GET".to_string(),
+//                 headers: request_headers.into_iter().map(|(k, v)| {
+//                     HttpHeader {
+//                         name: k.to_string(),
+//                         value: v.to_string(),
+//                     }
+//                 }).collect(),
+//                 body: None, // GET requests usually don't have a body
+//             }
+//         },
+//         cycles,
+//     );
+//
+//     match request.await {
+//         Ok((response,)) => {
+//             // Check if the request was successful (status code 200)
+//             if response.status_code != 200 {
+//                 return Err(Error::HttpError(format!(
+//                     "HTTP request failed with status code: {}",
+//                     response.status_code
+//                 )));
+//             }
+//
+//             // Convert the body to a String
+//             match String::from_utf8(response.body) {
+//                 Ok(body) => Ok(body),
+//                 Err(e) => Err(Error::DecodingError(format!(
+//                     "Failed to decode response body: {}", e
+//                 ))),
+//             }
+//         },
+//         Err((code, msg)) => {
+//             Err(Error::HttpError(format!(
+//                 "HTTP request failed with code {}: {}",
+//                 code, msg
+//             )))
+//         }
+//     }
+// }
+
 
 ic_cdk::export_candid!();
 

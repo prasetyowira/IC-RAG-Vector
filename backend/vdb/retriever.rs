@@ -39,7 +39,7 @@ impl AsyncRetriever for VectorDBRetriever {
     type ErrorType = Error;
 
     async fn retrieve(
-        &self, text: &str, top_k: NonZeroU32
+        &self, text: &str, _top_k: NonZeroU32
     ) -> Result<Chunks, Self::ErrorType> {
         // Use the existing retrieve_documents method with the top_k value
         let results = self.retrieve_documents(text).await?;
