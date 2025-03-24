@@ -20,11 +20,11 @@ instant-distance = { git = "https://github.com/elna-ai/instant-distance", versio
     "serde",
     "serde-big-array",
 ] }
+rag-toolchain = { git = "https://github.com/prasetyowira/rust-rag-toolchain", version = "0.1.9", features = ["openai"]}
 candid = "0.10"
 ic-cdk = "0.17"
 ic-cdk-macros = "0.17.1"
 serde = "1"
-rag-toolchain = "0.1.9"
 ic-stable-structures = "0.6.0"
 thiserror = "1.0.40"
 ciborium = "0.2.1"
