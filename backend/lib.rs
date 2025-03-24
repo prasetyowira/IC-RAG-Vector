@@ -21,6 +21,7 @@ use space::{Metric};
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use vdb::db::DB;
+use vdb::collection::DocMetadata;
 use vdb::error::Error;
 use vdb::embedding::{Embedding, embed_content};
 use vdb::retriever::VectorDBRetriever;
@@ -34,6 +35,7 @@ struct FileEmbedding {
     id: FileId,
     name: String,
     filename: String,
+    file_type: String,
     embedding: Embedding,
 }
 
@@ -45,28 +47,46 @@ pub struct ChatMessage {
 }
 
 
-#[update]
-async fn create_collection(name: String, dimension: usize) -> Result<(), Error> {
-    DB.with(|db| {
-        let mut db = db.borrow_mut();
-        db.create_collection(name, dimension)
-    })
-}
-
-#[update]
-async fn delete_collection(name: String) -> Result<(), Error> {
-    DB.with(|db| {
-        let mut db = db.borrow_mut();
-        db.delete_collection(&name)
-    })
-}
-
 //// EMBEDDING + Knowledge BASE CRUD
 // --- CREATE + EMBEDDING ---
 #[update]
-async fn upload_file(name: String, filename: String, data: ByteBuf) -> Result<String, Error> {
+async fn upload_file(file_type: String, title: String, filename: String, data: ByteBuf) -> Result<String, Error> {
+    // get user from ic_cdk::caller()
+    let user = ic_cdk::caller();
+    // check if user is authenticated
+    if user == Principal::anonymous() {
+        return Err(Error::Unauthorized);
+    }
+    // user principal id as collection name
+    let collection_name = user.to_string();
+
+    let mut content = data.clone();
+
+    // Check if file_type is valid, only pdf, txt, and valid public link are allowed
+    if file_type != "pdf" && file_type != "txt" && file_type != "link" {
+        return Err(Error::InvalidInput);
+    }
+
+    // if file_type is link, validate the link
+    if file_type == "link" {
+        // change data to link
+        let link = String::from_utf8(content.clone().to_vec()).unwrap();
+
+        if !validate_link(link) {
+            return Err(Error::InvalidInput);
+        }
+
+        let result = download_file_from_link(link).await?;
+        content = ByteBuf::from(result);
+    }
+
+    // check if collection exists, if not create new collection
+    if !DB.with(|db| db.borrow().collections.contains_key(&collection_name)) {
+        create_collection(collection_name.clone(), 1536).await?;
+    }
+
     // Convert ByteBuf to UTF-8 string with proper error handling
-    let content_str = match String::from_utf8(data.to_vec()) {
+    let content_str = match String::from_utf8(content.to_vec()) {
         Ok(content) => content,
         Err(_) => return Err(Error::InvalidInput),
     };
@@ -74,19 +94,20 @@ async fn upload_file(name: String, filename: String, data: ByteBuf) -> Result<St
     // Create chunk and embedding
     let chunk = Chunk::new(content_str.clone());
     let embedding = embed_content(chunk).await;
+    let file_size = content.len() as u64;
+    let created_at = ic_cdk::api::time();
 
     // Insert into collection with proper error handling
     DB.with(|db| {
         let mut db = db.borrow_mut();
         
-        // Check if collection exists
-        if !db.collections.contains_key(&name) {
-            return Err(Error::NotFound);
-        }
-        
-        // Insert the document
-        match db.insert_into_collection(&name, vec![embedding], vec![content_str], filename.clone()) {
-            Ok(_) => Ok(format!("Doc {} upload success!", filename)),
+        // Insert the document and handle error
+        match db.insert_into_collection(&collection_name, vec![embedding], vec![content_str], filename.clone(), title, file_type, file_size, created_at) {
+            Ok(_) => {
+                // Rebuild index
+                db.build_index(&collection_name)?;
+                Ok(format!("Doc {} upload success!", filename))
+            },
             Err(e) => Err(e),
         }
     })
@@ -95,8 +116,17 @@ async fn upload_file(name: String, filename: String, data: ByteBuf) -> Result<St
 // --- UPDATE + RE-EMBED ---
 #[update]
 async fn update_document(
-    name: String, filename: String, data: ByteBuf
+    filename: String, data: ByteBuf
 ) -> Result<String, Error> {
+    // get user from ic_cdk::caller()
+    let user = ic_cdk::caller();
+    // check if user is authenticated
+    if user == Principal::anonymous() {
+        return Err(Error::Unauthorized);
+    }
+    // user principal id as collection name
+    let name = user.to_string();
+
     let content_str = String::from_utf8(data.to_vec()).unwrap();
     //chunked content
     let chunk = Chunk::new(content_str.clone());
@@ -124,7 +154,7 @@ async fn update_document(
         db.remove_document_from_collection(&name, &filename)?;
         
         // Insert updated document
-        db.insert_into_collection(&name, vec![embedding], vec![content_str.clone()], filename.clone())?;
+        db.insert_into_collection(&name, vec![embedding], vec![content_str.clone()], filename.clone(), title, file_type, file_size, created_at)?;
         
         // Rebuild index
         db.build_index(&name)?;
@@ -135,19 +165,42 @@ async fn update_document(
 
 // --- DELETE ---
 #[update]
-async fn delete_document(name: String, filename: String) -> Result<String, Error> {
+async fn delete_document(filename: String) -> Result<String, Error> {
+    // get user from ic_cdk::caller()
+    let user = ic_cdk::caller();
+    // check if user is authenticated
+    if user == Principal::anonymous() {
+        return Err(Error::Unauthorized);
+    }
+    // user principal id as collection name
+    let collection_name = user.to_string();
+
     DB.with(|db| {
         let mut db = db.borrow_mut();
-        db.remove_document_from_collection(&name, &filename)?;
+        db.remove_document_from_collection(&collection_name, &filename)?;
         Ok(format!("Document '{}' successfully deleted", filename))
     })
 }
 
 // --- LIST DOCS (without embedding) ---
 #[query]
-async fn list_documents(name: String, limit: Option<usize>, offset: Option<usize>) -> Result<Vec<String>, Error> {
+async fn list_documents(limit: Option<usize>, offset: Option<usize>) -> Result<Vec<DocMetadata>, Error> {
+    // get user from ic_cdk::caller()
+    let user = ic_cdk::caller();
+    // check if user is authenticated
+    if user == Principal::anonymous() {
+        return Err(Error::Unauthorized);
+    }
+    // user principal id as collection name
+    let name = user.to_string();
+    
     let limit = limit.unwrap_or(10); // Default limit of 10 documents
     let offset = offset.unwrap_or(0); // Default offset of 0 (start from beginning)
+
+    // Check if collection exists
+    if !DB.with(|db| db.borrow().collections.contains_key(&name)) {
+        return Err(Error::NotFound);
+    }
 
     DB.with(|db| {
         let mut db = db.borrow_mut();
@@ -170,7 +223,16 @@ async fn list_documents(name: String, limit: Option<usize>, offset: Option<usize
 //// LLM Integration
 // --- Chat LLM ---
 #[update]
-async fn chat(collection_name: String, messages: Vec<ChatMessage>) -> Result<String, Error> {
+async fn chat(messages: Vec<ChatMessage>) -> Result<String, Error> {
+    // get user from ic_cdk::caller()
+    let user = ic_cdk::caller();
+    // check if user is authenticated
+    if user == Principal::anonymous() {
+        return Err(Error::Unauthorized);
+    }
+    // user principal id as collection name
+    let collection_name = user.to_string();
+    
     if messages.is_empty() {
         return Err(Error::InvalidInput);
     }
@@ -232,6 +294,18 @@ async fn chat(collection_name: String, messages: Vec<ChatMessage>) -> Result<Str
 #[query]
 fn healthcheck() -> String {
     "Canister sehat bro!".to_string()
+}
+
+fn validate_link(link: String) -> bool {
+    // check if link is valid
+    let url = Url::parse(&link);
+    url.is_ok()
+}
+
+async fn download_file_from_link(link: String) -> Result<String, Error> {
+    let response = reqwest::get(link).await?;
+    let content = response.text().await?;
+    Ok(content)
 }
 
 ic_cdk::export_candid!();

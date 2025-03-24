@@ -1,4 +1,4 @@
-use super::collection::Collection;
+use super::collection::{Collection, DocMetadata};
 use super::error::Error;
 use super::index::Vector;
 // use super::memory::Memory;
@@ -55,12 +55,16 @@ impl Database {
 
     pub fn insert_into_collection(
         &mut self,
-        name: &String,
+        collection_name: &String,
         keys: Vec<Vec<f32>>,
         values: Vec<String>,
         file_name: String,
+        title: String,
+        file_type: String,
+        file_size: u64,
+        created_at: u64,
     ) -> Result<(), Error> {
-        let collection = self.collections.get_mut(name).ok_or(Error::NotFound)?;
+        let collection = self.collections.get_mut(collection_name).ok_or(Error::NotFound)?;
 
         if keys.len() != values.len() {
             return Err(Error::DimensionMismatch);
@@ -85,7 +89,7 @@ impl Database {
             _values.push(values[i].clone());
         }
 
-        let _ = collection.append(&mut points, &mut _values, file_name);
+        let _ = collection.append(&mut points, &mut _values, file_name, title, file_type, file_size, created_at);
         Ok(())
     }
 
@@ -130,15 +134,19 @@ impl Database {
         self.collections.iter().map(|(id, _)| id.clone()).collect()
     }
 
-    pub fn get_docs(&mut self, index_name: &String) -> Result<Vec<String>, Error> {
+    pub fn get_docs(&mut self, index_name: &String) -> Result<Vec<DocMetadata>, Error> {
         let collection = match self.collections.get(index_name) {
             Some(value) => value,
             None => return Err(Error::NotFound),
         };
 
+        if collection.metadata.docs.is_empty() {
+            return Err(Error::NotFound);
+        }
+
         // Convert the HashSet to a sorted Vec for consistent ordering across calls
-        let mut docs: Vec<String> = Vec::from_iter(collection.metadata.file_names.clone());
-        docs.sort(); // Sort for consistent pagination
+        let mut docs: Vec<DocMetadata> = Vec::from_iter(collection.metadata.docs.clone());
+        docs.sort_by_key(|doc| doc.created_at);
 
         Ok(docs)
     }
@@ -151,11 +159,11 @@ impl Database {
         let collection = self.collections.get_mut(&name.clone()).ok_or(Error::NotFound)?;
         
         // Check if the file exists in the collection
-        if !collection.metadata.file_names.contains(file_name) {
+        if !collection.metadata.docs.contains_key(file_name) {
             return Err(Error::NotFound);
         }
 
-        collection.remove(name).unwrap();
+        collection.remove(file_name).unwrap();
         
         // Rebuild the index
         collection.build_index();

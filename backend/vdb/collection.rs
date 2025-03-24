@@ -4,20 +4,40 @@ use ic_stable_structures::{storable::Bound, Storable};
 use instant_distance::{HnswMap, Search};
 use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
-use std::{collections::HashSet, usize};
+use std::{collections::{HashSet, HashMap}, usize};
+
+#[derive(Serialize, Deserialize, Hash, Eq, PartialEq, Debug)]
+pub struct DocMetadata {
+    pub title: String,
+    pub file_names: String,
+    pub file_type: Option<String>,
+    pub file_size: u64,
+    pub created_at: u64,
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Metadata {
-    pub file_names: HashSet<String>,
+    pub docs: HashMap<String, DocMetadata>,
+    pub count: u64,
+    pub created_at: u64,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct Collection {
     pub dimension: usize,
-    pub metadata: Metadata,
+    pub mut metadata: Metadata,
     inner: HnswMap<Vector, String>,
     keys: Vec<Vector>,
     values: Vec<String>,
+}
+
+#[derive(Deserialize, Clone)]
+pub struct CollectionQuery {
+    pub title: Option<String>,
+    pub file_name: Option<String>,
+    pub file_type: Option<String>,
+    pub date_from: Option<u64>,
+    pub date_to: Option<u64>,
 }
 
 impl Storable for Collection {
@@ -43,9 +63,23 @@ impl Collection {
             inner: generate_index(keys, values),
             dimension,
             metadata: Metadata {
-                file_names: HashSet::new(),
+                docs: HashMap::new(),
             },
         }
+    }
+
+    / Method baru untuk mencari dokumen berdasarkan metadata
+    pub fn find(&self, query: CollectionQuery) -> Vec<Document> {
+        let mut results = Vec::new();
+        
+        
+        }
+        
+        results
+    }
+
+    pub fn contains_key(&self, key: &String) -> bool {
+        self.metadata.docs.contains_key(key)
     }
 
     pub fn append(
@@ -53,13 +87,25 @@ impl Collection {
         keys: &mut Vec<Vector>,
         values: &mut Vec<String>,
         file_name: String,
+        title: String,
+        file_type: String,
+        file_size: u64,
+        created_at: u64,
     ) -> Result<(), String> {
         if keys.len() != values.len() {
             return Err(String::from("length of keys not eq to values'"));
         }
         self.keys.append(keys);
         self.values.append(values);
-        self.metadata.file_names.insert(file_name);
+        let docs_metadata = DocMetadata {
+            title,
+            file_name,
+            file_type,
+            file_size,
+            created_at,
+        };
+        self.metadata.docs.insert(file_name, docs_metadata);
+        self.metadata.count += 1;
 
         Ok(())
     }
@@ -83,12 +129,12 @@ impl Collection {
     // Method to remove all vectors associated with a file
     pub fn remove(&mut self, file_name: &String) -> Result<(), String> {
         // Check if the file exists
-        if !self.metadata.file_names.contains(file_name) {
-            return Err(format!("File '{}' not found in collection", file_name));
-        }
+        let index = self.values.iter().position(|v| v == file_name).unwrap();
+        self.keys.remove(index);
+        self.values.remove(index);
         
         // Remove from metadata
-        self.metadata.file_names.remove(file_name);
+        self.metadata.docs.remove(file_name);
         Ok(())
     }
 }
