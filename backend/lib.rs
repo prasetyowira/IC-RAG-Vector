@@ -1,46 +1,14 @@
 use candid::Principal;
 mod vdb;
 
-use std::num::NonZeroU32;
-use candid::{CandidType};
 use ic_cdk_macros::{query, update};
-use rag_toolchain::{
-    clients::OpenAIChatCompletionClient,
-    clients::OpenAIModel::{Gpt3Point5Turbo},
-    clients::PromptMessage,
-    chains::{BasicRAGChain},
-    common::Chunk
-};
-use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
-use url::Url;
 use vdb::db::DB;
 use vdb::collection::{DocMetadata, CollectionQuery};
 use vdb::error::Error;
-use vdb::embedding::{Embedding, embed_content};
-use vdb::retriever::VectorDBRetriever;
 
-type FileId = String;
-
-#[derive(Clone, CandidType, Serialize, Deserialize)]
-struct FileEmbedding {
-    id: FileId,
-    name: String,
-    filename: String,
-    file_type: String,
-    embedding: Embedding,
-}
-
-// Define a ChatMessage struct for our Candid interface
-#[derive(CandidType, Serialize, Deserialize, Debug, Clone)]
-pub struct ChatMessage {
-    role: String, // "user", "assistant", or "system"
-    content: String,
-}
-
-
-//// EMBEDDING + Knowledge BASE CRUD
-// --- CREATE + EMBEDDING ---
+//// VECTOR DB CRUD
+// --- CREATE + INSERT ---
 #[update]
 async fn upload_file(file_type: String, title: String, filename: String, data: ByteBuf) -> Result<String, Error> {
     // get user from ic_cdk::caller()
@@ -55,32 +23,23 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
     let content = data.clone();
 
     // Check if file_type is valid, only pdf, txt, and valid public link are allowed
-    if file_type != "pdf" && file_type != "txt" && file_type != "link" {
+    if file_type != "pdf" && file_type != "txt" && file_type != "docs" && file_type != "image" {
         return Err(Error::FileTypeNotSupported);
     }
 
-    // if file_type is link, validate the link
-    if file_type == "link" {
-        // change data to link
-        let link = String::from_utf8(content.clone().to_vec()).unwrap();
-
-        if !validate_link(link.clone()) {
-            return Err(Error::InvalidInput);
-        }
-
-        // return error invalid input with message, "currently not supported"
-        return Err(Error::FileTypeNotSupported)
-    }
+    // Convert ByteBuf to Vec<f32>
+    let vector_value = data.chunks_exact(4)
+        .map(TryInto::try_into)
+        .map(Result::unwrap)
+        .map(f32::from_le_bytes)
+        .collect();
 
     // Convert ByteBuf to UTF-8 string with proper error handling
     let content_str = match String::from_utf8(content.to_vec()) {
         Ok(content) => content,
         Err(_) => return Err(Error::InvalidInput),
     };
-    
-    // Create chunk and embedding
-    let chunk = Chunk::new(content_str.clone());
-    let embedding = embed_content(chunk).await;
+
     let file_size = content.len() as u64;
     let created_at = ic_cdk::api::time();
 
@@ -91,10 +50,9 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
         if !exist {
             db.create_collection(collection_name.clone(), 1000).unwrap();
         }
-
         
         // Insert the document and handle error
-        match db.insert_into_collection(&collection_name, vec![embedding], vec![content_str], filename.clone(), title, file_type, file_size, created_at) {
+        match db.insert_into_collection(&collection_name, vec![vector_value], vec![content_str], filename.clone(), title, file_type, file_size, created_at) {
             Ok(_) => {
                 // Rebuild index
                 db.build_index(&collection_name)?;
@@ -123,8 +81,12 @@ async fn update_document(
     let created_at = ic_cdk::api::time();
     let content_str = String::from_utf8(data.to_vec()).unwrap();
     //chunked content
-    let chunk = Chunk::new(content_str.clone());
-    let embedding = embed_content(chunk).await;
+    // Convert ByteBuf to Vec<f32>
+    let vector_value = data.chunks_exact(4)
+        .map(TryInto::try_into)
+        .map(Result::unwrap)
+        .map(f32::from_le_bytes)
+        .collect();
 
     DB.with(|db| {
         let mut db = db.borrow_mut();
@@ -153,7 +115,7 @@ async fn update_document(
         // Insert updated document
         db.insert_into_collection(
             &name,
-            vec![embedding],
+            vec![vector_value],
             vec![content_str.clone()],
             filename.clone(),
             title, file_type, file_size, created_at
@@ -223,90 +185,90 @@ async fn list_documents(limit: Option<usize>, offset: Option<usize>) -> Result<V
     })
 }
 
-//// LLM Integration
+//// LLM Integration | SKIP For now
 // --- Chat LLM ---
-#[update]
-async fn chat(messages: Vec<ChatMessage>) -> Result<String, Error> {
-    // get user from ic_cdk::caller()
-    let user = ic_cdk::caller();
-    // check if user is authenticated
-    if user == Principal::anonymous() {
-        return Err(Error::Unauthorized);
-    }
-    // user principal id as collection name
-    let collection_name = user.to_string();
-    
-    if messages.is_empty() {
-        return Err(Error::InvalidInput);
-    }
-
-    // Get the last message which should be from user
-    let last_message = match messages.last() {
-        Some(msg) if msg.role == "user" => &msg.content,
-        _ => return Err(Error::InvalidInput),
-    };
-
-    // 1. Create a knowledge base vector retriever from our vector db
-    let retriever = DB.with(|db| -> Result<VectorDBRetriever, Error> {
-        let db = db.borrow_mut();
-        // Check if collection exists
-        if !db.collections.contains_key(&collection_name) {
-            return Err(Error::NotFound);
-        }
-
-        Ok(VectorDBRetriever::new(collection_name.clone()))
-    })?;
-
-    // 2. Create chat client
-    let chat_client = OpenAIChatCompletionClient::try_new(Gpt3Point5Turbo)
-        .map_err(|_| Error::MemoryError)?;
-
-    // 3. Create a RAG chain
-    let chain: BasicRAGChain<OpenAIChatCompletionClient, VectorDBRetriever> = BasicRAGChain::builder()
-        .retriever(retriever)
-        .chat_client(chat_client)
-        .build();
-
-    // let store: PostgresVectorStore =
-    //     PostgresVectorStore::try_new("embeddings", TextEmbeddingAda002)
-    //         .await
-    //         .unwrap();
-    // let embedding_client: OpenAIEmbeddingClient =
-    //     OpenAIEmbeddingClient::try_new(TextEmbeddingAda002).unwrap();
-    // let retriever: PostgresVectorRetriever<OpenAIEmbeddingClient> =
-    //     store.as_retriever(embedding_client, DistanceFunction::Cosine);
-    // let chain: BasicRAGChain<OpenAIChatCompletionClient, PostgresVectorRetriever<_>> =
-    //     BasicRAGChain::builder()
-    //         .chat_client(chat_client)
-    //         .retriever(retriever)
-    //         .build();
-
-    // 4. Create a human prompt from the user's message
-    let prompt: PromptMessage = PromptMessage::HumanMessage(last_message.into());
-
-    // 5. Invoke the chain
-    let response = chain
-        .invoke_chain(prompt, NonZeroU32::new(2).unwrap())
-        .await
-        .map_err(|_| Error::MemoryError)?;
-
-    Ok(response.content().to_string())
-
-}
+// #[update]
+// async fn chat(messages: Vec<ChatMessage>) -> Result<String, Error> {
+//     // get user from ic_cdk::caller()
+//     let user = ic_cdk::caller();
+//     // check if user is authenticated
+//     if user == Principal::anonymous() {
+//         return Err(Error::Unauthorized);
+//     }
+//     // user principal id as collection name
+//     let collection_name = user.to_string();
+//
+//     if messages.is_empty() {
+//         return Err(Error::InvalidInput);
+//     }
+//
+//     // Get the last message which should be from user
+//     let last_message = match messages.last() {
+//         Some(msg) if msg.role == "user" => &msg.content,
+//         _ => return Err(Error::InvalidInput),
+//     };
+//
+//     // 1. Create a knowledge base vector retriever from our vector db
+//     let retriever = DB.with(|db| -> Result<VectorDBRetriever, Error> {
+//         let db = db.borrow_mut();
+//         // Check if collection exists
+//         if !db.collections.contains_key(&collection_name) {
+//             return Err(Error::NotFound);
+//         }
+//
+//         Ok(VectorDBRetriever::new(collection_name.clone()))
+//     })?;
+//
+//     // 2. Create chat client
+//     let chat_client = OpenAIChatCompletionClient::try_new(Gpt3Point5Turbo)
+//         .map_err(|_| Error::MemoryError)?;
+//
+//     // 3. Create a RAG chain
+//     let chain: BasicRAGChain<OpenAIChatCompletionClient, VectorDBRetriever> = BasicRAGChain::builder()
+//         .retriever(retriever)
+//         .chat_client(chat_client)
+//         .build();
+//
+//     // let store: PostgresVectorStore =
+//     //     PostgresVectorStore::try_new("embeddings", TextEmbeddingAda002)
+//     //         .await
+//     //         .unwrap();
+//     // let embedding_client: OpenAIEmbeddingClient =
+//     //     OpenAIEmbeddingClient::try_new(TextEmbeddingAda002).unwrap();
+//     // let retriever: PostgresVectorRetriever<OpenAIEmbeddingClient> =
+//     //     store.as_retriever(embedding_client, DistanceFunction::Cosine);
+//     // let chain: BasicRAGChain<OpenAIChatCompletionClient, PostgresVectorRetriever<_>> =
+//     //     BasicRAGChain::builder()
+//     //         .chat_client(chat_client)
+//     //         .retriever(retriever)
+//     //         .build();
+//
+//     // 4. Create a human prompt from the user's message
+//     let prompt: PromptMessage = PromptMessage::HumanMessage(last_message.into());
+//
+//     // 5. Invoke the chain
+//     let response = chain
+//         .invoke_chain(prompt, NonZeroU32::new(2).unwrap())
+//         .await
+//         .map_err(|_| Error::MemoryError)?;
+//
+//     Ok(response.content().to_string())
+//
+// }
 
 #[query]
 fn healthcheck() -> String {
     "Canister sehat bro!".to_string()
 }
 
-fn validate_link(link: String) -> bool {
-    // check if link is valid
-    let url = Url::parse(&link);
-    url.is_ok()
-}
-
-
 // skip this feature for now
+
+// fn validate_link(link: String) -> bool {
+//     // check if link is valid
+//     let url = Url::parse(&link);
+//     url.is_ok()
+// }
+
 // async fn download_file_from_link(link: String) -> Result<String, Error> {
 //     // First validate the link
 //     if !validate_link(link.clone()) {

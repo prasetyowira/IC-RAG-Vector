@@ -1,0 +1,26 @@
+type DocMetadata = record {
+  title : text;
+  created_at : nat64;
+  file_name : text;
+  file_size : nat64;
+  file_type : opt text;
+};
+type Error = variant {
+  MemoryError;
+  InvalidInput;
+  UniqueViolation;
+  DimensionMismatch;
+  NotFound;
+  DBError;
+  Unauthorized;
+  FileTypeNotSupported;
+};
+type Result = variant { Ok : text; Err : Error };
+type Result_1 = variant { Ok : vec DocMetadata; Err : Error };
+service : {
+  delete_document : (text) -> (Result);
+  healthcheck : () -> (text) query;
+  list_documents : (opt nat64, opt nat64) -> (Result_1) query;
+  update_document : (text, text, text, blob) -> (Result);
+  upload_file : (text, text, text, blob) -> (Result);
+}
