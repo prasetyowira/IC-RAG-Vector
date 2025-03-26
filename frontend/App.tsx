@@ -1,26 +1,18 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './store/AuthContext';
-import ChatPage from './pages/ChatPage';
 import KnowledgeBasePage from './pages/KnowledgeBasePage';
 import SignInPage from './pages/SignInPage';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import PublicRoute from './components/auth/PublicRoute';
+import LandingPage from './pages/LandingPage';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Rute yang memerlukan autentikasi */}
-          <Route 
-            path="/chat" 
-            element={
-              <ProtectedRoute>
-                <ChatPage />
-              </ProtectedRoute>
-            } 
-          />
+          {/* Protected Route */}
           <Route 
             path="/knowledge" 
             element={
@@ -30,7 +22,7 @@ function App() {
             } 
           />
           
-          {/* Rute publik yang hanya dapat diakses jika tidak autentikasi */}
+          {/* Public Route */}
           <Route 
             path="/signin" 
             element={
@@ -38,6 +30,11 @@ function App() {
                 <SignInPage />
               </PublicRoute>
             } 
+          />
+
+          <Route 
+            path="/" 
+            element={<LandingPage />} 
           />
           
           {/* Default redirect */}

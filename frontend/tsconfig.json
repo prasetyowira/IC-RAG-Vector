@@ -18,8 +18,7 @@
     "types": ["vite/client"],
     "baseUrl": ".",
     "paths": {
-      "backend": ["../declarations/backend"],
-      "frontend": ["../declarations/frontend"]
+      "declarations/*": ["../src/declarations/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx"],

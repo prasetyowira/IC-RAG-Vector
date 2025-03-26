@@ -1,5 +1,5 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { backend } from 'backend';
+import { backend } from 'declarations/backend';
 import { RootState } from './store';
 
 // Define interface for user

@@ -12,7 +12,7 @@ const SignInPage: React.FC = () => {
     setIsLoading(true);
     try {
       await login();
-      navigate('/chat');
+      navigate('/knowledge');
     } catch (error) {
       console.error('Login error:', error);
     } finally {
@@ -36,7 +36,7 @@ const SignInPage: React.FC = () => {
         {/* Sign in form */}
         <div className="flex-1 flex flex-col justify-center p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold mb-2">Welcome to RAG Vector Chat</h1>
+            <h1 className="text-2xl font-bold mb-2">Welcome to ICP Vector DB</h1>
             <p className="text-gray-600">Sign in with Internet Identity</p>
           </div>
           
@@ -55,7 +55,7 @@ const SignInPage: React.FC = () => {
             </button>
             
             <div className="text-center text-gray-600 text-sm">
-              <p>Internet Identity adalah sistem autentikasi yang aman dari Internet Computer</p>
+              <p>Vector Database stored in ICP Blockchain</p>
             </div>
           </div>
         </div>

@@ -1,14 +1,14 @@
 import { defineConfig } from 'vite';
 import { fileURLToPath, URL } from 'url';
 import environment from 'vite-plugin-environment';
-import dotenv from 'dotenv';
 import react from '@vitejs/plugin-react';
-
-dotenv.config({ path: '../.env' });
 
 export default defineConfig({
   build: {
     emptyOutDir: true,
+  },
+  define: {
+    'process.env': process.env
   },
   optimizeDeps: {
     esbuildOptions: {
@@ -34,17 +34,11 @@ export default defineConfig({
   resolve: {
     alias: [
       {
-        find: "backend",
+        find: "declarations",
         replacement: fileURLToPath(
-          new URL("../declarations/backend", import.meta.url)
+          new URL("../src/declarations", import.meta.url)
         ),
-      },
-      {
-        find: "frontend",
-        replacement: fileURLToPath(
-          new URL("../declarations/frontend", import.meta.url)
-        ),
-      },
+      }
     ],
     dedupe: ['@dfinity/agent'],
   },

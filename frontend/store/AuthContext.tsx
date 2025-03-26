@@ -1,9 +1,11 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { AuthClient } from '@dfinity/auth-client';
 import { Identity } from '@dfinity/agent';
+import { createActor } from 'declarations/backend';
+import { canisterId } from 'declarations/backend';
 
-// Tetapkan identity provider berdasarkan environment
-const network = process.env.DFX_NETWORK || 'local';
+// Set identity provider based on environment
+const network = import.meta.env.DFX_NETWORK || 'local';
 const identityProvider =
   network === 'ic'
     ? 'https://identity.ic0.app' // Mainnet
@@ -15,6 +17,7 @@ interface AuthContextType {
   identity: Identity | null;
   principal: string;
   isInitializing: boolean;
+  actor: any | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
 }
@@ -27,6 +30,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [identity, setIdentity] = useState<Identity | null>(null);
   const [principal, setPrincipal] = useState<string>('');
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
+  const [actor, setActor] = useState<any | null>(null);
+
+  // Create actor with the provided identity
+  const setupActor = (currentIdentity: Identity) => {
+    const newActor = createActor(canisterId, {
+      agentOptions: {
+        identity: currentIdentity
+      }
+    });
+    setActor(newActor);
+    return newActor;
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -40,6 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (isAuthed) {
           const currentIdentity = client.getIdentity();
           setIdentity(currentIdentity);
+          setupActor(currentIdentity);
           setPrincipal(currentIdentity.getPrincipal().toString());
         }
       } catch (error) {
@@ -61,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(true);
         const currentIdentity = authClient.getIdentity();
         setIdentity(currentIdentity);
+        setupActor(currentIdentity);
         setPrincipal(currentIdentity.getPrincipal().toString());
       }
     });
@@ -72,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await authClient.logout();
     setIsAuthenticated(false);
     setIdentity(null);
+    setActor(null);
     setPrincipal('');
   };
 
@@ -82,6 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       identity, 
       principal, 
       isInitializing,
+      actor,
       login, 
       logout 
     }}>
@@ -90,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Hook untuk menggunakan AuthContext
+// Hook to use AuthContext
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {

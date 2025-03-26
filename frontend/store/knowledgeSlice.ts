@@ -1,23 +1,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
-import { backend } from 'backend';
 import { RootState } from './store';
-
-// Type definitions
-export interface Document {
-  id: string;
-  title: string;
-  type: string;
-  size: number;
-  createdAt: number;
-}
-
-interface KnowledgeState {
-  documents: Document[];
-  selectedDocumentId: string | null;
-  isLoading: boolean;
-  error: string | null;
-  collectionId: string;
-}
+import { DocMetadata } from 'declarations/backend/backend.did';
+import { Document, PaginationParams, FileUploadParams, BackendActor, KnowledgeState } from './types/knowledgeTypes';
 
 // Initial state
 const initialState: KnowledgeState = {
@@ -25,32 +9,45 @@ const initialState: KnowledgeState = {
   selectedDocumentId: null,
   isLoading: false,
   error: null,
-  collectionId: "default"
+  hasMore: true,
+  totalDocuments: 0,
+  currentPage: 1,
+  pageSize: 10
 };
 
-// Async thunk for fetching documents from the backend canister
+// Async thunk for fetching documents with pagination
 export const fetchDocuments = createAsyncThunk(
   'knowledge/fetchDocuments',
-  async (_, { getState, rejectWithValue }) => {
+  async ({actor, params, append = false}: {
+    actor: BackendActor, 
+    params: PaginationParams, 
+    append?: boolean
+  }, { rejectWithValue }) => {
     try {
-      const state = getState() as RootState;
-      const { collectionId } = state.knowledge;
-      
       // Call the ICP backend canister to get documents
-      const response = await backend.list_documents(collectionId, [], []);
+      const response = await actor.list_documents(
+        [BigInt(params.limit)], 
+        [BigInt(params.offset)]
+      );
       
       if ('Err' in response) {
         throw new Error(JSON.stringify(response.Err));
       }
       
-      // For now just return document IDs as we don't have full document metadata
-      return response.Ok.map((docId: string) => ({
-        id: docId,
-        title: `Document ${docId}`,
-        type: 'Unknown',
-        size: 0,
-        createdAt: Date.now()
+      // Transform the data
+      const documents = response.Ok.map((doc: DocMetadata) => ({
+        filename: doc.file_name,
+        title: doc.title,
+        type: doc.file_type[0] || 'unknown',
+        size: Number(doc.file_size),
+        createdAt: new Date(Number(doc.created_at) * 1000)
       }));
+      
+      return {
+        documents,
+        append,
+        hasMore: documents.length === params.limit,
+      };
     } catch (error) {
       const errorString = String(error);
       const match = errorString.match(/(SysTransient|CanisterReject), \+"([^\\"]+")/);
@@ -63,20 +60,17 @@ export const fetchDocuments = createAsyncThunk(
 // Async thunk for uploading a document
 export const uploadDocument = createAsyncThunk(
   'knowledge/uploadDocument',
-  async (document: { title: string; type: string; content: string }, { getState, rejectWithValue }) => {
-    try {
-      const state = getState() as RootState;
-      const { collectionId } = state.knowledge;
-      
-      // Convert content to ByteBuf (Uint8Array)
-      const encoder = new TextEncoder();
-      const contentBytes = encoder.encode(document.content);
-      
+  async ({actor, params}: {
+    actor: BackendActor, 
+    params: FileUploadParams
+  }, { rejectWithValue }) => {
+    try {      
       // Call the ICP backend canister to upload document
-      const response = await backend.upload_file(
-        collectionId,
-        document.title,
-        contentBytes
+      const response = await actor.upload_file(
+        params.title,
+        params.type,
+        params.filename,
+        params.content
       );
       
       if ('Err' in response) {
@@ -85,11 +79,11 @@ export const uploadDocument = createAsyncThunk(
       
       // Return document info
       return {
-        id: response.Ok,
-        title: document.title,
-        type: document.type,
-        size: document.content.length,
-        createdAt: Date.now()
+        filename: params.filename,
+        title: params.title,
+        type: params.type,
+        size: params.content.length,
+        createdAt: new Date()
       };
     } catch (error) {
       const errorString = String(error);
@@ -103,19 +97,19 @@ export const uploadDocument = createAsyncThunk(
 // Async thunk for deleting a document
 export const deleteDocument = createAsyncThunk(
   'knowledge/deleteDocument',
-  async (documentId: string, { getState, rejectWithValue }) => {
+  async ({actor, filename}: {
+    actor: BackendActor, 
+    filename: string
+  }, { rejectWithValue }) => {
     try {
-      const state = getState() as RootState;
-      const { collectionId } = state.knowledge;
-      
       // Call the ICP backend canister to delete document
-      const response = await backend.delete_document(collectionId, documentId);
+      const response = await actor.delete_document(filename);
       
       if ('Err' in response) {
         throw new Error(JSON.stringify(response.Err));
       }
       
-      return documentId;
+      return filename;
     } catch (error) {
       const errorString = String(error);
       const match = errorString.match(/(SysTransient|CanisterReject), \+"([^\\"]+")/);
@@ -137,17 +131,24 @@ const knowledgeSlice = createSlice({
     clearDocuments: (state) => {
       state.documents = [];
       state.selectedDocumentId = null;
+      state.currentPage = 1;
+      state.hasMore = true;
+    },
+    
+    resetPagination: (state) => {
+      state.currentPage = 1;
+      state.hasMore = true;
     },
     
     updateDocumentTitle: (state, action: PayloadAction<{ documentId: string; title: string }>) => {
-      const document = state.documents.find(d => d.id === action.payload.documentId);
+      const document = state.documents.find(d => d.filename === action.payload.documentId);
       if (document) {
         document.title = action.payload.title;
       }
     },
     
-    setCollectionId: (state, action: PayloadAction<string>) => {
-      state.collectionId = action.payload;
+    setPageSize: (state, action: PayloadAction<number>) => {
+      state.pageSize = action.payload;
     }
   },
   extraReducers: (builder) => {
@@ -159,7 +160,18 @@ const knowledgeSlice = createSlice({
       })
       .addCase(fetchDocuments.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.documents = action.payload;
+        
+        if (action.payload.append) {
+          state.documents = [...state.documents, ...action.payload.documents];
+        } else {
+          state.documents = action.payload.documents;
+        }
+        
+        state.hasMore = action.payload.hasMore;
+        
+        if (action.payload.documents.length > 0) {
+          state.currentPage++;
+        }
       })
       .addCase(fetchDocuments.rejected, (state, action) => {
         state.isLoading = false;
@@ -173,7 +185,7 @@ const knowledgeSlice = createSlice({
       })
       .addCase(uploadDocument.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.documents.push(action.payload);
+        state.documents = [action.payload, ...state.documents];
       })
       .addCase(uploadDocument.rejected, (state, action) => {
         state.isLoading = false;
@@ -187,7 +199,7 @@ const knowledgeSlice = createSlice({
       })
       .addCase(deleteDocument.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.documents = state.documents.filter(d => d.id !== action.payload);
+        state.documents = state.documents.filter(d => d.filename !== action.payload);
         if (state.selectedDocumentId === action.payload) {
           state.selectedDocumentId = null;
         }
@@ -204,15 +216,22 @@ export const {
   setSelectedDocument, 
   clearDocuments, 
   updateDocumentTitle,
-  setCollectionId
+  resetPagination,
+  setPageSize
 } = knowledgeSlice.actions;
 
+// Selectors
 export const selectDocuments = (state: RootState) => state.knowledge.documents;
 export const selectSelectedDocument = (state: RootState) => {
   const { selectedDocumentId, documents } = state.knowledge;
-  return documents.find((document: Document) => document.id === selectedDocumentId) || null;
+  return documents.find((document) => document.filename === selectedDocumentId) || null;
 };
 export const selectIsLoading = (state: RootState) => state.knowledge.isLoading;
 export const selectError = (state: RootState) => state.knowledge.error;
+export const selectPaginationParams = (state: RootState) => ({
+  currentPage: state.knowledge.currentPage,
+  pageSize: state.knowledge.pageSize,
+  hasMore: state.knowledge.hasMore
+});
 
 export default knowledgeSlice.reducer; 
