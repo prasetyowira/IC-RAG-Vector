@@ -12,7 +12,7 @@ use serde_bytes::ByteBuf;
 use vdb::db::DB;
 use vdb::collection::DocMetadata;
 use vdb::error::Error;
-use vdb::memory::{is_owner, set_config_map,get_config_map_by_key, get_upgrades_memory, get_stable_btree_memory};
+use vdb::memory::{is_owner, set_config_map,get_config_map_by_key, get_upgrades_memory};
 use crate::client::{generate_embeddings, extract_text_from_bytebuf};
 
 const OPENAI_API_KEY: &str = "OPENAI_KEY";
@@ -108,24 +108,13 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
     ic_cdk::println!("filename: {}", filename.clone());
     ic_cdk::println!("collection_name: {}", collection_name.clone());
 
-    // Check if file_type is valid, only pdf, txt, docs, and image are allowed. and throw FileTypeNotSupported error
-    let valid_file_types = vec!["pdf", "text", "docs", "image"];
+    // Check if file_type is valid, only pdf, txt, docs  are allowed. and throw FileTypeNotSupported error
+    let valid_file_types = vec!["pdf", "text", "docs"];
     if !valid_file_types.contains(&file_type.as_str()) {
         ic_cdk::println!("cek: {}", &file_type.as_str());
         ic_cdk::println!("cek2: {}", valid_file_types.contains(&file_type.as_str()));
         return Err(Error::FileTypeNotSupported);
     }
-
-    // // Convert ByteBuf to Vec<f32>
-    // let vector_keys = data.chunks_exact(4)
-    //     .map(TryInto::try_into)
-    //     .map(Result::unwrap)
-    //     .map(f32::from_le_bytes)
-    //     .collect();
-    // let vector_values = match String::from_utf8(content.to_vec()) {
-    //     Ok(content) => content,
-    //     Err(_) => return Err(Error::InvalidInput),
-    // };
 
     let file_size = data.len() as u64;
     let created_at = ic_cdk::api::time() / 1_000_000;

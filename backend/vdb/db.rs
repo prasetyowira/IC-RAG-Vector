@@ -1,8 +1,6 @@
 use super::collection::{Collection, DocMetadata, CollectionQuery};
 use super::error::Error;
 use super::index::Vector;
-// use super::memory::Memory;
-// use ic_stable_structures::StableBTreeMap;
 use instant_distance::Search;
 use serde::{Deserialize, Serialize};
 use std::{cell::RefCell, collections::HashMap};
