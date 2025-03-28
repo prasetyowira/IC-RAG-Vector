@@ -5,7 +5,6 @@ import { BackendActor } from '../../store/types/knowledgeTypes';
 const FILE_TYPE_OPTIONS = [
   { value: 'pdf', label: 'PDF Document', mimeTypes: ['application/pdf'] },
   { value: 'text', label: 'Text File', mimeTypes: ['text/plain'] },
-  { value: 'docs', label: 'Word Document', mimeTypes: ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] }
 ];
 
 // Flattened array of all accepted MIME types
