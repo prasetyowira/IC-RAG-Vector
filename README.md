@@ -1,9 +1,10 @@
-# `ic_rag_vec`
+# `VectorICP`
 this is project for ICP hackaton, more info: https://codefest.notion.site/
 
 ## Project Overview
 ### Purpose
-This project aims to provide a secure, efficient, and decentralized solution for managing knowledge bases using embeddings stored within the Internet Computer Protocol (ICP). Leveraging vector embeddings and Hierarchical Navigable Small World (HNSW) indexing, it enables powerful semantic search and retrieval functionality, enhancing the capabilities of Retrieval-Augmented Generation (RAG) systems directly on-chain.
+This project aims to provide a secure, efficient, and decentralized solution for managing knowledge bases using embeddings stored within the Internet Computer Protocol (ICP). Leveraging vector embeddings and Hierarchical Navigable Small World (HNSW) indexing, it enables powerful semantic search and retrieval functionality, 
+the goals are enhancing the capabilities of Retrieval-Augmented Generation (RAG) systems directly on-chain.
 
 ### Target Audience
 The primary target audience includes:
@@ -22,7 +23,7 @@ Rust & IC-CDK: Efficient backend programming language with robust support for IC
 
 HNSW: Advanced indexing for vector embeddings, enabling fast semantic search.
 
-OpenAI Embedding (rag-toolchain): Integration with OpenAI APIs for generating accurate vector embeddings.
+OpenAI Embedding: Integration with OpenAI APIs for generating accurate vector embeddings.
 
 Stable Memory (ic-stable-structures): Persistent, scalable storage solution provided by ICP, enabling the handling of large datasets up to 500 GB per canister.
 
@@ -44,75 +45,108 @@ This combination ensures scalability, reliability, and performance, positioning 
 
 ## Core Features and Areas
 
-### 1. CRUD Knowledge Base
-- **Purpose**: Store and manage knowledge bases as vector embeddings.
-- **Core functionality**: Add, read, update, and delete document embeddings.
-- **Technical requirements**: ICP stable memory, HNSW indexing, Rust backend.
-- **User interactions**: Web interface for uploading documents, editing metadata, and managing embeddings.
+### 1. Document Management System
+- **Purpose**: Store, organize, and manage knowledge documents securely on the Internet Computer blockchain.
+- **Core functionality**: Upload, view, download, and delete documents with metadata management.
+- **Technical implementation**: Uses ICP stable memory for persistent storage with efficient querying.
+- **User interactions**: Intuitive web interface with drag-and-drop uploading, document previews, and organization tools.
 
-### 2. Semantic Search
-- **Purpose**: Retrieve relevant information efficiently from knowledge bases.
-- **Core functionality**: Perform semantic searches using vector embeddings.
-- **Technical requirements**: HNSW indexing, vector search algorithms.
-- **User interactions**: Search bar and result interface displaying relevant documents.
+### 2. Vector Embeddings & Storage
+- **Purpose**: Transform documents into vector embeddings for semantic understanding.
+- **Core functionality**: Generate, store, and index high-dimensional vector embeddings from document content.
+- **Technical implementation**: Implements HNSW (Hierarchical Navigable Small World) indexing for fast approximate nearest neighbor search.
+- **Performance**: Optimized for speed and memory efficiency with customizable parameters for precision/recall trade-offs.
 
-### 3. Simple Chat Client
-- **Purpose**: Allow users to interact naturally with stored knowledge bases.
-- **Core functionality**: Chat interface to ask questions and receive contextual answers based on stored embeddings.
-- **Technical requirements**: Integration with OpenAI or similar LLM APIs, React frontend.
-- **User interactions**: Real-time chat interface with input box and conversational response display.
+### 3. Semantic Search Engine
+- **Purpose**: Enable powerful content discovery through meaning-based search rather than keyword matching.
+- **Core functionality**: Query vector embeddings to find semantically similar content across the knowledge base.
+- **Technical implementation**: Uses cosine similarity with efficient vector operations for relevance ranking.
+- **User interactions**: Clean search interface with highlighted results and relevance indicators.
+
+### 4. Security & Access Control
+- **Purpose**: Ensure document security and appropriate access permissions.
+- **Core functionality**: Internet Identity integration, ownership verification, and granular permission settings.
+- **Technical implementation**: Leverages ICP's principal-based security model with custom authorization checks.
+- **User interactions**: Simple role assignment interface with clear permission indicators.
+
+## Current Limitations
+
+VectorICP, like any project built on the Internet Computer Protocol, comes with certain limitations that developers should be aware of:
+
+### HTTP Outcall Constraints
+- **Limited Request and Response Size**: The ICP HTTP outcall feature has restrictions on the size of requests and responses, which can impact integration with external APIs that return large payloads.
+- **Cost Considerations**: HTTP outcalls on ICP are relatively expensive in terms of cycles consumption, which affects the economics of extensive external API usage.
+
+### SDK Limitations
+- **HTTP Method Restrictions**: The current SDK only supports GET and POST methods for HTTP outcalls, limiting the types of external API interactions possible.
+- **Streaming Capability**: There is a need to add streaming capability to handle larger data transfers more efficiently.
+
+### WebAssembly Constraints
+- **Rust to Wasm Compilation**: Running Rust code compiled to WebAssembly introduces certain performance and memory management considerations that differ from native execution.
+- **Memory Management**: Working within the WebAssembly memory model requires careful consideration, especially for large vector operations.
+
+These limitations are being actively addressed by both the ICP ecosystem and our development team as the platform evolves.
+
 
 ## Development Guidelines
 
-### Frontend (`src/ic_rag_vec_frontend`)
-Frontend built with React + Vite + Tailwind CSS (max 2000 lines of TSX code), hosted entirely in an ICP canister.
+### Frontend Development
+Frontend built with React + TypeScript + Tailwind CSS, deployed as an ICP canister.
 
-- **Component Structure and Organization**
-  - Follow atomic design principles (Atoms, Molecules, Organisms, Pages).
-  - Maintain clean component hierarchy with clear naming conventions (PascalCase for components).
-  - Separate UI logic from business logic.
+- **Design System**
+  - **Color Palette**: Primary (#0e79b8), Secondary (#f5b36b), Accent colors (#66a6d2, #3f90c7)
+  - **Typography**: Sans-serif fonts for readability with consistent heading hierarchy
+  - **Components**: Use atomic design principles with consistent styling patterns
 
-- **State Management Approach**
-  - Prefer React built-in hooks (`useState`, `useEffect`, `useReducer`) for simple state.
-  - Use Zustand or Redux Toolkit for global state management if complexity grows.
+- **React Best Practices**
+  - Functional components with hooks for state management
+  - Custom hooks for reusable logic
+  - Proper error boundaries and loading states
+  - Memoization for performance optimization
 
-- **Routing Conventions**
-  - Use React Router v6 for clean and maintainable client-side routing.
-  - Clearly defined and structured routes in a central configuration file.
+- **State Management**
+  - Redux with Redux Toolkit for global application state
+  - Clear action and reducer patterns
+  - Proper handling of async operations with thunks
 
-- **Asset Management**
-  - Store static assets (images, icons, fonts) within `/src/ic_rag_vec_frontend/public/assets`.
-  - Prefer SVGs for icons and small graphics for performance optimization.
+- **Testing & Quality**
+  - Component unit tests with React Testing Library
+  - Integration tests for critical user flows
+  - Accessibility testing and keyboard navigation support
 
-- **Performance Optimization Techniques**
-  - Lazy load heavy components/pages using React.lazy and Suspense.
-  - Minimize unnecessary re-renders using memoization (`useMemo`, `React.memo`).
-  - Optimize bundle size with code-splitting and tree shaking (via Vite).
+### Backend Development
+Backend written in Rust, leveraging the Internet Computer Protocol's capabilities.
 
----
+- **Code Organization**
+  - Clear separation of concerns between modules
+  - Well-defined interfaces between components
+  - Comprehensive error handling with custom error types
+  - Detailed comments and documentation
 
-### Backend (`src/ic_rag_vec_backend`, `src/ic_rag_vec_macros`)
-Backend written in Rust, compiled to `wasm32-unknown-unknown`, running within a single ICP canister.
+- **Vector Database Implementation**
+  - Efficient serialization/deserialization of embeddings
+  - Optimized HNSW index configuration for performance
+  - Batched operations for memory efficiency
+  - Versioned schema design for future upgrades
 
-- **API Design Principles**
-  - Follow RESTful or RPC conventions clearly and consistently.
-  - Use clear, concise, and descriptive endpoint naming (`upload_file`, `chat`, etc.).
-  - Maintain consistent serialization/deserialization using Candid.
+- **API Design**
+  - RESTful patterns for resource operations
+  - Clear error responses with helpful messages
+  - Proper input validation and sanitization
+  - Comprehensive logging for debugging
 
-- **Error Handling Standards**
-  - Standardize custom error types using Rust’s `Result` and custom enums.
-  - Consistently return meaningful error messages to frontend consumers.
-  - Implement comprehensive logging for debugging purposes.
+- **Performance Considerations**
+  - Minimize heap allocations
+  - Efficient use of stable memory
+  - Optimize query execution paths
+  - Implement caching strategies for frequent operations
 
-- **Database Schema Conventions**
-  - Use clearly defined structures for embedding storage and metadata.
-  - Leverage `ic-stable-structures` for persistence with defined schema.
-  - Maintain versioned schemas for ease of upgrade and migration.
+- **Configuration Management**
+  - OpenAI API key integration for generating embeddings
+  - Environment-specific configuration handling
+  - Secure credential management
+  - Feature flags for optional functionality
 
-- **Security Measures**
-  - Use secure authorization and ownership verification macros (`check_authorization`, `check_is_owner`).
-  - Strictly validate and sanitize all input data.
-  - Clearly define canister access controls and ICP principals.
 
 ## ICP
 - [Quick Start](https://internetcomputer.org/docs/current/developer-docs/setup/deploy-locally)
@@ -125,10 +159,29 @@ Backend written in Rust, compiled to `wasm32-unknown-unknown`, running within a 
 If you want to start working on your project right away, you might want to try the following commands:
 
 ```bash
-cd ic_rag_vec/
+cd vector_icp/
 dfx help
 dfx canister --help
 ```
+
+## OpenAI API Key Configuration
+
+This project requires an OpenAI API key to generate embeddings for documents. You'll need to configure this key before deploying:
+
+1. Obtain an API key from [OpenAI Platform](https://platform.openai.com/api-keys)
+2. In your project's `dfx.json` file, locate the backend canister configuration:
+
+```json
+"backend": {
+  "type": "rust",
+  "package": "ic_rag_vec_backend",
+  "candid": "src/backend/backend.did",
+  "init_arg": "(record {openApiKeys = \"insert your openai api key here\"})"
+},
+```
+
+3. Replace `"insert your openai api key here"` with your actual OpenAI API key
+4. Never commit your API key to version control
 
 ## Running the project locally
 
@@ -137,6 +190,10 @@ If you want to test your project locally, you can use the following commands:
 ```bash
 # Starts the replica, running in the background
 dfx start --background
+
+# Configure your OpenAI API key in dfx.json
+# Find the section with "init_arg" and replace with your key:
+# "init_arg": "(record {openApiKeys = \"your-openai-api-key-here\"})"
 
 # Deploys your canisters to the replica and generates your candid interface
 dfx deploy
