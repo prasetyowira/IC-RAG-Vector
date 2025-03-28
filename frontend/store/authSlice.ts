@@ -14,6 +14,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  isOwner: boolean;
 }
 
 // Initial state
@@ -22,23 +23,8 @@ const initialState: AuthState = {
   isAuthenticated: false,
   isLoading: false,
   error: null,
+  isOwner: false,
 };
-
-// Healthcheck thunk to verify canister connectivity
-export const checkHealth = createAsyncThunk(
-  'auth/checkHealth',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await backend.healthcheck();
-      return response;
-    } catch (error) {
-      const errorString = String(error);
-      const match = errorString.match(/(SysTransient|CanisterReject), \+"([^\\"]+")/);
-      const errorMessage = match ? match[2] : 'Connection failed';
-      return rejectWithValue(errorMessage);
-    }
-  }
-);
 
 // Create the slice
 const authSlice = createSlice({
@@ -51,31 +37,20 @@ const authSlice = createSlice({
     setUser: (state, action: PayloadAction<User | null>) => {
       state.user = action.payload;
       state.isAuthenticated = action.payload !== null;
+    },
+    setIsOwner: (state, action: PayloadAction<boolean>) => {
+      state.isOwner = action.payload;
     }
-  },
-  extraReducers: (builder) => {
-    builder
-      // Healthcheck
-      .addCase(checkHealth.pending, (state) => {
-        state.isLoading = true;
-        state.error = null;
-      })
-      .addCase(checkHealth.fulfilled, (state) => {
-        state.isLoading = false;
-      })
-      .addCase(checkHealth.rejected, (state, action) => {
-        state.isLoading = false;
-        state.error = action.payload as string;
-      });
-  },
+  }
 });
 
 // Export actions and selectors
-export const { clearError, setUser } = authSlice.actions;
+export const { clearError, setUser, setIsOwner } = authSlice.actions;
 
 export const selectUser = (state: RootState) => state.auth.user;
 export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
 export const selectIsLoading = (state: RootState) => state.auth.isLoading;
 export const selectError = (state: RootState) => state.auth.error;
+export const selectIsOwner = (state: RootState) => state.auth.isOwner;
 
 export default authSlice.reducer; 

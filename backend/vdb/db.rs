@@ -16,24 +16,6 @@ pub struct Database {
     pub collections: HashMap<String, Collection>,
 }
 
-// #[derive(Serialize, Deserialize)]
-// pub struct Database {
-//     #[serde(skip, default = "init_stable_data")]
-//     pub collections: StableBTreeMap<String, Collection, Memory>,
-// }
-
-// fn init_stable_data() -> StableBTreeMap<String, Collection, Memory> {
-//     StableBTreeMap::init(super::memory::get_stable_btree_memory())
-// }
-
-// impl Default for Database {
-//     fn default() -> Self {
-//         Self {
-//             collections: init_stable_data(),
-//         }
-//     }
-// }
-
 impl Database {
     pub fn new() -> Self {
         Self {
@@ -66,24 +48,12 @@ impl Database {
     ) -> Result<(), Error> {
         let collection = self.collections.get_mut(collection_name).ok_or(Error::NotFound)?;
 
-        if keys.len() != values.len() {
-            return Err(Error::DimensionMismatch);
-        }
-
-        let all_same_length = keys.iter().all(|inner| inner.len() == collection.dimension);
-
-        if !all_same_length {
-            return Err(Error::DimensionMismatch);
-        }
-
         let mut points: Vec<Vector> = vec![];
         let mut _values: Vec<String> = vec![];
 
         for i in 0..keys.len() {
+            ic_cdk::println!("vali: {}", values[i].clone());
             let key = &keys[i];
-            if key.len() != collection.dimension {
-                continue;
-            }
             let point = Vector::from((*key).clone());
             points.push(point);
             _values.push(values[i].clone());
@@ -95,7 +65,7 @@ impl Database {
 
     pub fn build_index(&mut self, name: &String) -> Result<(), Error> {
         let collection = self.collections.get_mut(name).ok_or(Error::NotFound)?;
-
+        ic_cdk::println!("build index: {}", name.clone());
         collection.build_index();
         Ok(())
     }
@@ -135,14 +105,16 @@ impl Database {
     }
 
     pub fn get_docs(&mut self, index_name: &String) -> Result<Vec<DocMetadata>, Error> {
+        for (key, _) in &self.collections {
+            ic_cdk::println!("Collection Key: {}", key.clone());
+            ic_cdk::println!("idx: {}", index_name.clone());
+            ic_cdk::println!("id eq: {}", index_name.clone() == key.clone());
+        }
         let collection = match self.collections.get(index_name) {
             Some(value) => value,
             None => return Err(Error::NotFound),
         };
-
-        if collection.metadata.docs.is_empty() {
-            return Err(Error::NotFound);
-        }
+        ic_cdk::println!("coli: {}", collection.metadata.count.clone());
 
         // Convert the HashMap values to a Vec
         let mut docs: Vec<DocMetadata> = collection.metadata.docs.values().cloned().collect();
@@ -169,8 +141,8 @@ impl Database {
             return Err(Error::NotFound);
         }
 
-        collection.remove(file_name).unwrap();
-        
+        collection.remove(file_name);
+
         // Rebuild the index
         collection.build_index();
         

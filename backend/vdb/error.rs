@@ -18,6 +18,8 @@ pub enum Error {
     FileTypeNotSupported,
     #[error("vector db error")]
     DBError,
+    #[error("model error: {0}")]
+    ModelError(String),
 }
 impl From<Error> for String {
     fn from(error: Error) -> Self {

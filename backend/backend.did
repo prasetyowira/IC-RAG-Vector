@@ -9,18 +9,21 @@ type Error = variant {
   MemoryError;
   InvalidInput;
   UniqueViolation;
+  ModelError : text;
   DimensionMismatch;
   NotFound;
   DBError;
   Unauthorized;
   FileTypeNotSupported;
 };
+type InstallArgs = record { openApiKeys : text };
 type Result = variant { Ok : text; Err : Error };
 type Result_1 = variant { Ok : vec DocMetadata; Err : Error };
-service : {
+service : (InstallArgs) -> {
+  check_is_owner : () -> (bool) query;
   delete_document : (text) -> (Result);
   healthcheck : () -> (text) query;
   list_documents : (opt nat64, opt nat64) -> (Result_1) query;
-  update_document : (text, text, text, blob) -> (Result);
+  set_api_key : (text) -> (Result);
   upload_file : (text, text, text, blob) -> (Result);
 }

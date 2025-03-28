@@ -6,6 +6,10 @@ import react from '@vitejs/plugin-react';
 export default defineConfig({
   build: {
     emptyOutDir: true,
+    sourcemap: true
+  },
+  esbuild: {
+    sourcemap: true,
   },
   define: {
     'process.env': process.env

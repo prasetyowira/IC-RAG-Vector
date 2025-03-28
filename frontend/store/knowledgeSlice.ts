@@ -40,7 +40,7 @@ export const fetchDocuments = createAsyncThunk(
         title: doc.title,
         type: doc.file_type[0] || 'unknown',
         size: Number(doc.file_size),
-        createdAt: new Date(Number(doc.created_at) * 1000)
+        createdAt: new Date(Number(doc.created_at))
       }));
       
       return {
@@ -67,8 +67,8 @@ export const uploadDocument = createAsyncThunk(
     try {      
       // Call the ICP backend canister to upload document
       const response = await actor.upload_file(
-        params.title,
         params.type,
+        params.title,
         params.filename,
         params.content
       );
@@ -233,5 +233,6 @@ export const selectPaginationParams = (state: RootState) => ({
   pageSize: state.knowledge.pageSize,
   hasMore: state.knowledge.hasMore
 });
+export const selectIsUploading = (state: RootState) => state.knowledge.isLoading;
 
 export default knowledgeSlice.reducer; 

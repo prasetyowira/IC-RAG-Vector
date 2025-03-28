@@ -3,6 +3,8 @@ import { AuthClient } from '@dfinity/auth-client';
 import { Identity } from '@dfinity/agent';
 import { createActor } from 'declarations/backend';
 import { canisterId } from 'declarations/backend';
+import { useDispatch } from 'react-redux';
+import { setIsOwner } from './authSlice';
 
 // Set identity provider based on environment
 const network = import.meta.env.DFX_NETWORK || 'local';
@@ -20,11 +22,13 @@ interface AuthContextType {
   actor: any | null;
   login: () => Promise<void>;
   logout: () => Promise<void>;
+  checkIsOwner: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const dispatch = useDispatch();
   const [authClient, setAuthClient] = useState<AuthClient | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [identity, setIdentity] = useState<Identity | null>(null);
@@ -43,6 +47,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return newActor;
   };
 
+  // Check if the authenticated user is an owner
+  const checkIsOwner = async (): Promise<boolean> => {
+    if (!actor) return false;
+
+    try {
+      const isOwner = await actor.check_is_owner();
+      dispatch(setIsOwner(isOwner));
+      return isOwner;
+    } catch (error) {
+      console.error("Error checking owner status:", error);
+      dispatch(setIsOwner(false));
+      return false;
+    }
+  };
+
   useEffect(() => {
     const initAuth = async () => {
       try {
@@ -57,6 +76,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setIdentity(currentIdentity);
           setupActor(currentIdentity);
           setPrincipal(currentIdentity.getPrincipal().toString());
+          
+          // After setting up the actor, check if the user is an owner
+          setTimeout(async () => {
+            await checkIsOwner();
+          }, 500); // Small delay to ensure actor is initialized
         }
       } catch (error) {
         console.error("Error initializing auth client:", error);
@@ -77,8 +101,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAuthenticated(true);
         const currentIdentity = authClient.getIdentity();
         setIdentity(currentIdentity);
-        setupActor(currentIdentity);
+        const newActor = setupActor(currentIdentity);
         setPrincipal(currentIdentity.getPrincipal().toString());
+        
+        // Check owner status after login
+        setTimeout(async () => {
+          await checkIsOwner();
+        }, 500); // Small delay to ensure actor is initialized
       }
     });
   };
@@ -91,6 +120,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIdentity(null);
     setActor(null);
     setPrincipal('');
+    dispatch(setIsOwner(false)); // Reset owner status on logout
   };
 
   return (
@@ -102,7 +132,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isInitializing,
       actor,
       login, 
-      logout 
+      logout,
+      checkIsOwner
     }}>
       {children}
     </AuthContext.Provider>

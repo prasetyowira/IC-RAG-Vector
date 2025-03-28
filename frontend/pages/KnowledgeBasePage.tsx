@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useAuth } from '../store/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { 
   fetchDocuments, 
   uploadDocument, 
@@ -11,9 +12,11 @@ import {
   selectPaginationParams,
   setSelectedDocument,
   selectSelectedDocument,
+  selectIsUploading,
   clearDocuments,
   resetPagination
 } from '../store/knowledgeSlice';
+import { selectIsOwner } from '../store/authSlice';
 import DocumentList from '../components/knowledge/DocumentList';
 import FileUploader from '../components/knowledge/FileUploader';
 import { AppDispatch } from '../store/store';
@@ -21,14 +24,17 @@ import { PaginationParams, FileUploadParams } from '../store/types/knowledgeType
 
 const KnowledgeBasePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { actor } = useAuth();
+  const navigate = useNavigate();
+  const { actor, checkIsOwner, logout, principal } = useAuth();
   
   // Redux state
+  const isUploading = useSelector(selectIsUploading);
   const documents = useSelector(selectDocuments);
   const isLoading = useSelector(selectIsLoading);
   const error = useSelector(selectError);
   const selectedDocument = useSelector(selectSelectedDocument);
   const { currentPage, pageSize, hasMore } = useSelector(selectPaginationParams);
+  const isOwner = useSelector(selectIsOwner);
   
   // Local state
   const [notification, setNotification] = useState<{
@@ -36,10 +42,32 @@ const KnowledgeBasePage: React.FC = () => {
     message: string;
   } | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [deletingDocument, setDeletingDocument] = useState<string | null>(null);
   
   // Ref for the IntersectionObserver
   const observerRef = useRef<HTMLDivElement>(null);
   const listEndRef = useRef<HTMLDivElement>(null);
+  
+  // Handle logout
+  const handleLogout = async () => {
+    await logout();
+    navigate('/signin');
+  };
+  
+  // Truncate principal ID for display
+  const truncatePrincipal = (principalId: string) => {
+    if (!principalId) return '';
+    return principalId.length > 10 
+      ? `${principalId.substring(0, 5)}...${principalId.substring(principalId.length - 5)}`
+      : principalId;
+  };
+
+  // Check owner status on component mount
+  useEffect(() => {
+    if (actor) {
+      checkIsOwner();
+    }
+  }, [actor, checkIsOwner]);
   
   // Fetch documents on initial load
   useEffect(() => {
@@ -109,7 +137,10 @@ const KnowledgeBasePage: React.FC = () => {
     if (!actor) return;
     
     try {
+      setDeletingDocument(filename); // Set the document being deleted
+      
       await dispatch(deleteDocument({ actor, filename })).unwrap();
+      
       setNotification({
         type: 'success',
         message: 'Document deleted successfully'
@@ -125,6 +156,8 @@ const KnowledgeBasePage: React.FC = () => {
         type: 'error',
         message: String(error)
       });
+    } finally {
+      setDeletingDocument(null); // Clear the deleting state
     }
   };
   
@@ -172,6 +205,29 @@ const KnowledgeBasePage: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Header with logout button */}
+      <div className="bg-white shadow">
+        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
+          <div className="flex items-center">
+            <span className="text-lg font-semibold text-indigo-700">ICP Vector DB</span>
+          </div>
+          <div className="flex items-center gap-4">
+            {principal && (
+              <div className="hidden md:block text-sm text-gray-600">
+                <span className="mr-1">ID:</span>
+                <span className="font-mono">{truncatePrincipal(principal)}</span>
+              </div>
+            )}
+            <button
+              onClick={handleLogout}
+              className="px-4 py-1.5 text-sm font-medium text-indigo-600 bg-white border border-indigo-300 rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Notification */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-lg shadow-lg max-w-md ${
@@ -212,6 +268,7 @@ const KnowledgeBasePage: React.FC = () => {
               <button
                 onClick={() => setShowDeleteConfirm(null)}
                 className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none"
+                disabled={deletingDocument === showDeleteConfirm}
               >
                 Cancel
               </button>
@@ -220,8 +277,19 @@ const KnowledgeBasePage: React.FC = () => {
                   handleDeleteDocument(showDeleteConfirm);
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none"
+                disabled={deletingDocument === showDeleteConfirm}
               >
-                Delete
+                {deletingDocument === showDeleteConfirm ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Deleting...
+                  </>
+                ) : (
+                  'Delete'
+                )}
               </button>
             </div>
           </div>
@@ -237,6 +305,11 @@ const KnowledgeBasePage: React.FC = () => {
               <p className="text-gray-600">
                 Upload documents to enhance your AI assistant's knowledge
               </p>
+              {isOwner && (
+                <div className="mt-2 inline-block px-3 py-1 bg-indigo-100 text-indigo-800 text-xs font-medium rounded-full">
+                  Admin Access
+                </div>
+              )}
             </div>
             
             {/* Error Display */}
@@ -288,7 +361,7 @@ const KnowledgeBasePage: React.FC = () => {
               actor={actor}
               onUploadSuccess={handleUploadSuccess}
               onUploadError={handleUploadError}
-              isUploading={isLoading}
+              isUploading={isUploading}
             />
             
             {/* Selected Document Details */}
@@ -325,8 +398,19 @@ const KnowledgeBasePage: React.FC = () => {
                     <button
                       onClick={() => setShowDeleteConfirm(selectedDocument.filename)}
                       className="w-full px-4 py-2 border border-red-300 text-red-600 rounded-md hover:bg-red-50 focus:outline-none transition-colors"
+                      disabled={deletingDocument === selectedDocument.filename}
                     >
-                      Delete Document
+                      {deletingDocument === selectedDocument.filename ? (
+                        <>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-red-600 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Deleting...
+                        </>
+                      ) : (
+                        'Delete Document'
+                      )}
                     </button>
                   </div>
                 </div>

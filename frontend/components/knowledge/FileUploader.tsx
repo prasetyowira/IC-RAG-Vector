@@ -1,16 +1,15 @@
 import React, { useState, useRef } from 'react';
 import { BackendActor } from '../../store/types/knowledgeTypes';
 
-// Accepted file types
-const ACCEPTED_FILE_TYPES = [
-  'application/pdf',
-  'text/plain',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/jpeg',
-  'image/png',
-  'image/gif'
+// File type options
+const FILE_TYPE_OPTIONS = [
+  { value: 'pdf', label: 'PDF Document', mimeTypes: ['application/pdf'] },
+  { value: 'text', label: 'Text File', mimeTypes: ['text/plain'] },
+  { value: 'docs', label: 'Word Document', mimeTypes: ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'] }
 ];
+
+// Flattened array of all accepted MIME types
+const ACCEPTED_FILE_TYPES = FILE_TYPE_OPTIONS.flatMap(option => option.mimeTypes);
 
 // Map MIME types to simple extensions
 const MIME_TYPE_MAP: Record<string, string> = {
@@ -34,12 +33,17 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   actor,
   onUploadSuccess,
   onUploadError,
-  isUploading
+  isUploading: externalIsUploading
 }) => {
+  const [showModal, setShowModal] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState('');
+  const [selectedFileType, setSelectedFileType] = useState('');
+  const [localIsUploading, setLocalIsUploading] = useState(false); // Local loading state
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isUploading = externalIsUploading || localIsUploading;
 
   // Handle file selection
   const handleFileChange = (selectedFile: File | null) => {
@@ -47,7 +51,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     
     // Check if file type is supported
     if (!ACCEPTED_FILE_TYPES.includes(selectedFile.type)) {
-      onUploadError('File type not supported. Please upload PDF, TXT, DOC, DOCX, or images.');
+      onUploadError('File type not supported. Please upload PDF, TXT, DOC, DOCX.');
       return;
     }
     
@@ -56,6 +60,17 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     // Set default title from filename (without extension)
     const nameWithoutExt = selectedFile.name.split('.').slice(0, -1).join('.');
     setTitle(nameWithoutExt || selectedFile.name);
+    
+    // Set the file type based on MIME type
+    for (const option of FILE_TYPE_OPTIONS) {
+      if (option.mimeTypes.includes(selectedFile.type)) {
+        setSelectedFileType(option.value);
+        break;
+      }
+    }
+    
+    // Open the modal
+    setShowModal(true);
   };
 
   // Handle drag events
@@ -93,28 +108,41 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     }
   };
 
+  // Reset form
+  const resetForm = () => {
+    setFile(null);
+    setTitle('');
+    setSelectedFileType('');
+    setShowModal(false);
+  };
+
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!file || !actor) return;
+    if (!file || !actor || !selectedFileType) {
+      onUploadError('Please select a file and file type');
+      return;
+    }
     
     try {
+      setLocalIsUploading(true);
+
       // Read file as ArrayBuffer
       const arrayBuffer = await file.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       
-      // Get file extension from MIME type
-      const fileType = MIME_TYPE_MAP[file.type] || 'unknown';
+      // Get file extension from MIME type or use the selected type
+      const fileType = selectedFileType;
       
       // Create unique filename to avoid collisions
       const timestamp = Date.now();
-      const uniqueFilename = `${file.name.split('.')[0]}_${timestamp}.${fileType}`;
+      const uniqueFilename = `${file.name.split('.')[0]}_${timestamp}.${MIME_TYPE_MAP[file.type] || fileType}`;
       
       // Call API
       const result = await actor.upload_file(
-        title || file.name,
         fileType,
+        title || file.name,
         uniqueFilename,
         uint8Array
       );
@@ -124,21 +152,21 @@ const FileUploader: React.FC<FileUploaderProps> = ({
       }
       
       // Reset form and notify parent
-      setFile(null);
-      setTitle('');
+      resetForm();
       onUploadSuccess();
     } catch (error) {
       console.error('Upload error:', error);
       onUploadError(String(error));
+    } finally {
+      setLocalIsUploading(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-      <h2 className="text-lg font-medium text-gray-900 mb-4">Upload Document</h2>
-      
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* File Drop Area */}
+    <>
+      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Upload Document</h2>
+        
         <div 
           className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer ${
             dragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300'
@@ -155,82 +183,111 @@ const FileUploader: React.FC<FileUploaderProps> = ({
             ref={fileInputRef}
             type="file"
             className="hidden"
-            accept=".pdf,.txt,.doc,.docx,.jpg,.jpeg,.png,.gif"
+            accept=".pdf,.txt,.doc,.docx"
             onChange={handleInputChange}
           />
           
-          {file ? (
-            <div className="text-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-indigo-500 mx-auto mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <p className="text-sm font-medium text-gray-900">{file.name}</p>
-              <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
-            </div>
-          ) : (
-            <>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-              </svg>
-              <p className="text-sm font-medium text-gray-700">Drag & drop a file here or click to browse</p>
-              <p className="text-xs text-gray-500 mt-1">Supported formats: PDF, TXT, DOC, DOCX, JPG, PNG, GIF</p>
-            </>
-          )}
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <p className="text-sm font-medium text-gray-700">Drag & drop a file here or click to browse</p>
+          <p className="text-xs text-gray-500 mt-1">Supported formats: PDF, TXT, DOC, DOCX</p>
         </div>
-        
-        {/* Document Title */}
-        {file && (
-          <div>
-            <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
-              Document Title
-            </label>
-            <input
-              type="text"
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm"
-              placeholder="Enter document title"
-              required
-            />
-          </div>
-        )}
-        
-        {/* Submit Button */}
-        {file && (
-          <div className="flex justify-end">
-            <button
-              type="button"
-              onClick={() => {
-                setFile(null);
-                setTitle('');
-              }}
-              className="mr-2 inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              disabled={isUploading}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              disabled={isUploading || !actor}
-            >
-              {isUploading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Uploading...
-                </>
-              ) : (
-                'Upload Document'
+      </div>
+
+      {/* Document Upload Modal */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden mx-4">
+            <div className="p-4 border-b border-gray-200">
+              <h2 className="text-lg font-semibold">Add Document</h2>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="p-4">
+              {/* File Information */}
+              {file && (
+                <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                      <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                  </div>
+                </div>
               )}
-            </button>
+              
+              {/* Document Title */}
+              <div className="mb-4">
+                <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                  Document Title (Optional)
+                </label>
+                <input
+                  type="text"
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 text-sm"
+                  placeholder="Enter a title for your document"
+                />
+              </div>
+              
+              {/* File Type Selection */}
+              <div className="mb-6">
+                <label htmlFor="fileType" className="block text-sm font-medium text-gray-700 mb-1">
+                  File Type *
+                </label>
+                <select
+                  id="fileType"
+                  value={selectedFileType}
+                  onChange={(e) => setSelectedFileType(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500 text-sm"
+                  required
+                >
+                  <option value="">Select file type</option>
+                  {FILE_TYPE_OPTIONS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Buttons */}
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-sm font-medium"
+                  disabled={isUploading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-sm font-medium"
+                  disabled={isUploading || !actor || !selectedFileType}
+                >
+                  {isUploading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Uploading...
+                    </>
+                  ) : (
+                    'Upload Document'
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </form>
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -111,12 +111,11 @@ impl Collection {
         file_size: u64,
         created_at: u64,
     ) -> Result<(), String> {
-        if keys.len() != values.len() {
-            return Err(String::from("length of keys not eq to values'"));
-        }
         let f_name = file_name.clone();
         self.keys.append(keys);
+        ic_cdk::println!("keys append");
         self.values.append(values);
+        ic_cdk::println!("values append");
         let docs_metadata = DocMetadata {
             title,
             file_name,
@@ -125,7 +124,9 @@ impl Collection {
             created_at,
         };
         self.metadata.docs.insert(f_name, docs_metadata);
+        ic_cdk::println!("meta inserted");
         self.metadata.count += 1;
+        ic_cdk::println!("meta count incremented");
 
         Ok(())
     }
@@ -148,10 +149,12 @@ impl Collection {
 
     // Method to remove all vectors associated with a file
     pub fn remove(&mut self, file_name: &String) -> Result<(), String> {
-        // Check if the file exists
-        let index = self.values.iter().position(|v| v == file_name).unwrap();
-        self.keys.remove(index);
-        self.values.remove(index);
+        ic_cdk::println!("file_name: {}", &file_name.clone());
+        ic_cdk::println!("vv: {:?}", self.values.clone());
+
+        for item in self.values.clone() {
+            ic_cdk::println!("item: {}", &item.clone());
+        }
         
         // Remove from metadata
         self.metadata.docs.remove(file_name);
