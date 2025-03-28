@@ -3,10 +3,106 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>ICP Vector DB</title>
+    <meta name="description" content="VectorICP - Store, manage, and search your knowledge base securely with our decentralized vector database built on Internet Computer Protocol." />
+    <meta name="theme-color" content="#0e79b8" />
+    <meta name="keywords" content="vector database, embeddings, Internet Computer, ICP, AI, knowledge base, semantic search" />
+    <meta name="author" content="VectorICP" />
+    
+    <!-- Open Graph / Social Media Meta Tags -->
+    <meta property="og:title" content="VectorICP - Vector Embeddings on the Internet Computer" />
+    <meta property="og:description" content="Store, manage, and search your knowledge base securely with our decentralized vector database built on ICP technology." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://vectoricp.com" />
+    <meta property="og:image" content="./assets/image/vectoricp_logo.png" />
+    
+    <!-- Favicon -->
+    <link rel="icon" href="./assets/favicon.ico" />
+    
+    <!-- Preconnect to speed up resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    
+    <!-- Primary Font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" />
+    
+    <!-- Custom styles for initial load -->
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', sans-serif;
+        background-color: #f9fafb;
+      }
+      
+      #root {
+        min-height: 100vh;
+      }
+      
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background-color: #ffffff;
+        z-index: 9999;
+      }
+      
+      .app-logo {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-bottom: 2rem;
+      }
+      
+      .app-logo img {
+        height: 3.5rem;
+        margin-bottom: 0.5rem;
+      }
+      
+      .app-tagline {
+        font-size: 1rem;
+        color: #0e79b8;
+        font-weight: 500;
+      }
+      
+      .loading-spinner {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 50%;
+        border: 3px solid rgba(14, 121, 184, 0.1);
+        border-top-color: #0e79b8;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(14, 121, 184, 0.4); }
+        70% { box-shadow: 0 0 0 10px rgba(14, 121, 184, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(14, 121, 184, 0); }
+      }
+    </style>
+    
+    <title>VectorICP - Vector Embeddings on the Internet Computer</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Loading screen that appears before React loads -->
+      <div class="loading-screen">
+        <div class="app-logo">
+          <img src="./assets/image/vectoricp_logo.png" alt="VectorICP Logo" />
+          <div class="app-tagline">Vector Embeddings on the Internet Computer</div>
+        </div>
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
     <script type="module" src="./main.tsx"></script>
   </body>
 </html> 
