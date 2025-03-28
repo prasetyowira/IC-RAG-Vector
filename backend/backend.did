@@ -24,6 +24,5 @@ service : (InstallArgs) -> {
   delete_document : (text) -> (Result);
   healthcheck : () -> (text) query;
   list_documents : (opt nat64, opt nat64) -> (Result_1) query;
-  set_api_key : (text) -> (Result);
   upload_file : (text, text, text, blob) -> (Result);
 }

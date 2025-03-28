@@ -10,7 +10,8 @@ use ic_cdk::{
 use serde::{Deserialize, Serialize};
 use serde_bytes::ByteBuf;
 use std::str;
-
+use crate::extractor::pdf_file::extract_text_from_pdf;
+use crate::vdb::error::Error;
 
 /// Used to build a request to the Management Canister's `http_request` method.
 pub struct CanisterHttpRequest {
@@ -192,6 +193,12 @@ pub fn extract_text_from_bytebuf(data: &ByteBuf, file_type: &str) -> Result<Stri
             match str::from_utf8(data) {
                 Ok(text) => Ok(text.to_string()),
                 Err(_) => Err("Failed to decode text from file".to_string()),
+            }
+        },
+        "pdf" => {
+            match extract_text_from_pdf(data) {
+                Ok(text) => Ok(text.to_string()),
+                Err(_) => Err("Failed to decode pdf from file".to_string()),
             }
         },
         // Add support for other file types as needed

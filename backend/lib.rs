@@ -1,7 +1,7 @@
-use std::env::args;
 use candid::{CandidType, Principal};
 mod vdb;
 mod client;
+mod extractor;
 
 use ic_cdk_macros::{query, update};
 use ic_stable_structures::Storable;
@@ -85,6 +85,14 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
     // user principal id as collection name
     let collection_name = user.to_string();
 
+    // Check if file_type is valid, only pdf, txt, docs  are allowed. and throw FileTypeNotSupported error
+    let valid_file_types = vec!["pdf", "text", "docs"];
+    if !valid_file_types.contains(&file_type.as_str()) {
+        ic_cdk::println!("cek: {}", &file_type.as_str());
+        ic_cdk::println!("cek2: {}", valid_file_types.contains(&file_type.as_str()));
+        return Err(Error::FileTypeNotSupported);
+    }
+
     // let content = data.clone();
     // get open api key from env var
     let api_key = get_config_map_by_key(OPENAI_API_KEY.to_string()).unwrap();
@@ -107,14 +115,6 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
     ic_cdk::println!("title: {}", title.clone());
     ic_cdk::println!("filename: {}", filename.clone());
     ic_cdk::println!("collection_name: {}", collection_name.clone());
-
-    // Check if file_type is valid, only pdf, txt, docs  are allowed. and throw FileTypeNotSupported error
-    let valid_file_types = vec!["pdf", "text", "docs"];
-    if !valid_file_types.contains(&file_type.as_str()) {
-        ic_cdk::println!("cek: {}", &file_type.as_str());
-        ic_cdk::println!("cek2: {}", valid_file_types.contains(&file_type.as_str()));
-        return Err(Error::FileTypeNotSupported);
-    }
 
     let file_size = data.len() as u64;
     let created_at = ic_cdk::api::time() / 1_000_000;
