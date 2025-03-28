@@ -64,7 +64,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
         </div>
       )}
       
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-auto">
         {children}
       </main>
     </div>
