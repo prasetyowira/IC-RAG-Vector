@@ -7,6 +7,7 @@
       "shrink": true,
       "gzip": true,
       "wasm": "target/wasm32-unknown-unknown/release/backend.wasm",
+      "init_arg": "(record {openApiKeys = \"put your key here\"})"
     },
     "frontend": {
       "dependencies": ["backend"],
