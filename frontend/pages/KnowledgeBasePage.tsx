@@ -21,6 +21,7 @@ import DocumentList from '../components/knowledge/DocumentList';
 import FileUploader from '../components/knowledge/FileUploader';
 import { AppDispatch } from '../store/store';
 import { PaginationParams, FileUploadParams } from '../store/types/knowledgeTypes';
+import vectorIcpLogo from '../assets/image/vectoricp_logo.png';
 
 const KnowledgeBasePage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -209,7 +210,11 @@ const KnowledgeBasePage: React.FC = () => {
       <div className="bg-white shadow">
         <div className="container mx-auto px-4 py-3 flex justify-between items-center">
           <div className="flex items-center">
-            <span className="text-lg font-semibold text-indigo-700">ICP Vector DB</span>
+            <img 
+              src={vectorIcpLogo} 
+              alt="VectorICP Logo" 
+              className="h-10" 
+            />
           </div>
           <div className="flex items-center gap-4">
             {principal && (
@@ -220,7 +225,7 @@ const KnowledgeBasePage: React.FC = () => {
             )}
             <button
               onClick={handleLogout}
-              className="px-4 py-1.5 text-sm font-medium text-indigo-600 bg-white border border-indigo-300 rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+              className="px-4 py-1.5 text-sm font-medium text-[#0e79b8] bg-white border border-[#66a6d2] rounded-md hover:bg-[#e6f2fa] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0e79b8] transition-colors"
             >
               Logout
             </button>
@@ -367,7 +372,7 @@ const KnowledgeBasePage: React.FC = () => {
             {/* Selected Document Details */}
             {selectedDocument && (
               <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Document Details</h3>
+                <h3 className="text-lg font-medium text-[#0e79b8] mb-4">Document Details</h3>
                 <div className="space-y-3">
                   <div>
                     <span className="block text-sm font-medium text-gray-500">Title</span>

@@ -88,8 +88,8 @@ const DocumentList: React.FC<DocumentListProps> = ({
       {documents.map((doc) => (
         <div 
           key={doc.filename}
-          className={`px-4 py-4 sm:px-6 flex items-center hover:bg-gray-50 cursor-pointer ${
-            selectedDocumentId === doc.filename ? 'bg-indigo-50' : ''
+          className={`flex items-center px-4 py-4 border-b sm:px-6 border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors ${
+            selectedDocumentId === doc.filename ? 'bg-[#e6f2fa] border-l-4 border-l-[#0e79b8]' : ''
           }`}
           onClick={() => onSelect(doc.filename)}
         >

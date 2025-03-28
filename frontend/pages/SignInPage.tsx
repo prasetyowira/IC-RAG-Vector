@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import { useAuth } from '../store/AuthContext';
+import vectorIcpLogo from '../assets/image/vectoricp_logo.png';
 
 const SignInPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +26,7 @@ const SignInPage: React.FC = () => {
       <div className="min-h-screen flex flex-col">
         {/* Back button */}
         <div className="p-4">
-          <Link to="/" className="flex items-center text-indigo-600">
+          <Link to="/" className="flex items-center text-[#0e79b8]">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -36,7 +37,11 @@ const SignInPage: React.FC = () => {
         {/* Sign in form */}
         <div className="flex-1 flex flex-col justify-center p-8">
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold mb-2">Welcome to ICP Vector DB</h1>
+            <img 
+              src={vectorIcpLogo} 
+              alt="VectorICP Logo" 
+              className="h-16 mx-auto mb-4" 
+            />
             <p className="text-gray-600">Sign in with Internet Identity</p>
           </div>
           
@@ -44,7 +49,7 @@ const SignInPage: React.FC = () => {
             <button
               onClick={handleIcpLogin}
               disabled={isLoading}
-              className="w-full md:w-64 bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 px-4 rounded-xl font-medium shadow-md hover:shadow-lg transition duration-300 flex justify-center items-center"
+              className="w-full md:w-64 bg-gradient-to-r from-[#0e79b8] to-[#3f90c7] text-white py-3 px-4 rounded-xl font-medium shadow-md hover:shadow-lg transition duration-300 flex justify-center items-center"
             >
               {isLoading ? (
                 <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

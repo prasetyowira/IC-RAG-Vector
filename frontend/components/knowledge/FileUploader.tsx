@@ -165,11 +165,11 @@ const FileUploader: React.FC<FileUploaderProps> = ({
   return (
     <>
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <h2 className="text-lg font-medium text-gray-900 mb-4">Upload Document</h2>
+        <h2 className="text-lg font-medium text-[#0e79b8] mb-4">Upload Document</h2>
         
         <div 
           className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer ${
-            dragActive ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300'
+            dragActive ? 'border-[#0e79b8] bg-[#e6f2fa]' : 'border-gray-300'
           }`}
           onDragEnter={handleDrag}
           onDragLeave={handleDrag}
@@ -200,7 +200,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden mx-4">
             <div className="p-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold">Add Document</h2>
+              <h2 className="text-lg font-semibold text-[#0e79b8]">Add Document</h2>
             </div>
             
             <form onSubmit={handleSubmit} className="p-4">
@@ -208,8 +208,8 @@ const FileUploader: React.FC<FileUploaderProps> = ({
               {file && (
                 <div className="mb-4 p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center">
-                    <div className="flex-shrink-0 h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="flex-shrink-0 h-10 w-10 bg-[#e6f2fa] rounded-full flex items-center justify-center mr-3">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-[#0e79b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                     </div>
@@ -260,14 +260,14 @@ const FileUploader: React.FC<FileUploaderProps> = ({
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-sm font-medium"
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0e79b8] text-sm font-medium"
                   disabled={isUploading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 text-sm font-medium"
+                  className="px-4 py-2 bg-[#0e79b8] text-white rounded-xl hover:bg-[#066aa4] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#0e79b8] text-sm font-medium"
                   disabled={isUploading || !actor || !selectedFileType}
                 >
                   {isUploading ? (
