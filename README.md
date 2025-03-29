@@ -1,18 +1,57 @@
-# `VectorICP`
-this is project for ICP hackaton, more info: https://codefest.notion.site/
+<h1 align="center">
+    <a href="#">
+        <img src="./frontend/assets/vectoricp_logo_2-removebg-preview.png" style="margin-top:10px;margin-bottom:10px;width:400px;" alt="TrueOrigin Logo" width="800">
+    </a>
+</h1>
+
+
+# `VectorICP - The Pinecone VectorDB of Web 3.0`
+CodeFest ICP Ninja Hackathon 12 - World Computer Track
+
+<h1 align="center">
+    <img src="./frontend/assets/vc1.png" style="margin-top:12px;margin-bottom:12px" alt="Signa Product Page" width="850"></a>
+</h1>
+
+## Official Pitch Deck
+https://docs.google.com/presentation/d/1DE9rTY7l8FGGzRagHoQzUCcE_x8jAVlRhoIlADme6-I/edit?usp=sharing
+
+## ICP Canister 
+**Frontend:** https://w7gvm-haaaa-aaaap-qpyxa-cai.icp0.io/
+
+**Backend:** https://a4gq6-oaaaa-aaaab-qaa4q-cai.raw.icp0.io/?id=wwf6q-riaaa-aaaap-qpywq-cai
 
 ## Project Overview
 ### Purpose
-This project aims to provide a secure, efficient, and decentralized solution for managing knowledge bases using embeddings stored within the Internet Computer Protocol (ICP). Leveraging vector embeddings and Hierarchical Navigable Small World (HNSW) indexing, it enables powerful semantic search and retrieval functionality, 
-the goals are enhancing the capabilities of Retrieval-Augmented Generation (RAG) systems directly on-chain.
+VectorICP aims to provide a secure, efficient, and decentralized solution for managing knowledge bases using embeddings stored within the Internet Computer Protocol (ICP). Leveraging vector embeddings and Hierarchical Navigable Small World (HNSW) indexing, it enables powerful semantic search and retrieval functionality, 
+the goals are enhancing the capabilities of Retrieval-Augmented Generation (RAG) systems directly within ICP on-chain.
 
-### Target Audience
+<h1 align="center">
+    <img src="./frontend/assets/vc2.png" style="margin-top:10px;margin-bottom:10px" alt="Signa Product Page" width="750"></a>
+</h1>
+
+### We are aiming to tackle expensive cost to vectorize/indexing high-volume Data for RAG
 The primary target audience includes:
 - Developers and organizations interested in decentralized storage and retrieval of knowledge bases.
 
 - Teams building Retrieval-Augmented Generation (RAG) applications.
 
 - Researchers and enthusiasts exploring the intersection of blockchain technology, decentralized computing (ICP), and AI/ML embedding models.
+
+<h1 align="center">
+    <img src="./frontend/assets/vc3.png" style="margin-top:10px;margin-bottom:10px" alt="Signa Product Page" width="750"></a>
+</h1>
+<h1 align="center">
+    <img src="./frontend/assets/vc4.png" style="margin-top:10px;margin-bottom:10px" alt="Signa Product Page" width="750"></a>
+</h1>
+
+### How the VectorICP works
+<h1 align="center">
+    <img src="./frontend/assets/vc7.png" style="margin-top:10px;margin-bottom:10px" alt="Signa Product Page" width="750"></a>
+</h1>
+
+### Video Demo Walkthrough
+
+[![Video Thumbnail](https://img.youtube.com/vi/bIrup5YeLN4/0.jpg)](https://youtu.be/bIrup5YeLN4)
 
 ### Project Information
 This project is built on the Internet Computer Protocol (ICP) platform using Rust and leverages various technologies and libraries:
@@ -30,15 +69,15 @@ Stable Memory (ic-stable-structures): Persistent, scalable storage solution prov
 This combination ensures scalability, reliability, and performance, positioning the project uniquely at the intersection of blockchain decentralization and cutting-edge AI.
 
 ## Tech Stack
-- Frontend: React with Vite and Tailwind CSS, deployed as a dedicated frontend canister on-chain for seamless integration with the ICP backend.
+-** Frontend**: React with Vite and Tailwind CSS, deployed as a dedicated frontend canister on-chain for seamless integration with the ICP backend.
 
-- Backend: Rust and IC-CDK for backend logic, storage, and embedding handling.
+- **Backend**: Rust and IC-CDK for backend logic, storage, and embedding handling.
 
-- Indexing & Search: HNSW vector indexing for efficient semantic search.
+- **Indexing & Search**: HNSW vector indexing for efficient semantic search.
 
-- Embedding Generation: OpenAI API via rag-toolchain integration.
+- **Embedding Generation**: OpenAI API via rag-toolchain integration.
 
-- Storage: ICP Stable Memory for persistent and large-scale data management.
+- **Storage**: ICP Stable Memory for persistent and large-scale data management.
 
 This combination ensures scalability, reliability, and performance, positioning the project uniquely at the intersection of blockchain decentralization and cutting-edge AI
 
@@ -73,20 +112,9 @@ This combination ensures scalability, reliability, and performance, positioning 
 
 VectorICP, like any project built on the Internet Computer Protocol, comes with certain limitations that developers should be aware of:
 
-### HTTP Outcall Constraints
-- **Limited Request and Response Size**: The ICP HTTP outcall feature has restrictions on the size of requests and responses, which can impact integration with external APIs that return large payloads.
-- **Cost Considerations**: HTTP outcalls on ICP are relatively expensive in terms of cycles consumption, which affects the economics of extensive external API usage.
-
-### SDK Limitations
-- **HTTP Method Restrictions**: The current SDK only supports GET and POST methods for HTTP outcalls, limiting the types of external API interactions possible.
-- **Streaming Capability**: There is a need to add streaming capability to handle larger data transfers more efficiently.
-
-### WebAssembly Constraints
-- **Rust to Wasm Compilation**: Running Rust code compiled to WebAssembly introduces certain performance and memory management considerations that differ from native execution.
-- **Memory Management**: Working within the WebAssembly memory model requires careful consideration, especially for large vector operations.
-
-These limitations are being actively addressed by both the ICP ecosystem and our development team as the platform evolves.
-
+<h1 align="center">
+    <img src="./frontend/assets/vc6.png" style="margin-top:10px;margin-bottom:10px" alt="Signa Product Page" width="750"></a>
+</h1>
 
 ## Development Guidelines
 
