@@ -1,5 +1,5 @@
 use candid::Func;
-
+use ic_cdk::api::management_canister::main::raw_rand;
 use ic_cdk::{
     api::management_canister::http_request::{
         http_request, CanisterHttpRequestArgument, HttpHeader, HttpMethod, HttpResponse,
@@ -30,6 +30,12 @@ pub(crate) fn is_ipv4_support_available() -> bool {
     let support = cfg!(feature = "ipv4-support");
     ic_cdk::println!("IPv4 support: {}", support.clone());
     support
+}
+
+async fn generate_icp_uuid() -> String {
+    let (random_bytes,): (Vec<u8>,) = raw_rand().await.expect("Failed dapetin randomness dari ICP");
+    let uuid_bytes: [u8; 16] = random_bytes[..16].try_into().expect("Slice gagal");
+    hex::encode(uuid_bytes)
 }
 
 impl CanisterHttpRequest {
@@ -151,9 +157,8 @@ pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, 
         Err(e) => return Err(format!("Failed to serialize request: {}", e)),
     };
 
-    let (random_bytes,): (Vec<u8>,) = ic_cdk::api::management_canister::main::raw_rand().await.unwrap();
-    let random_bytes = random_bytes.to_string();
-    ic_cdk::println!("idempotency_key: {}", random_bytes.clone());
+    let ikey = generate_icp_uuid().await;
+    ic_cdk::println!("idempotency_key: {}", ikey.clone().to_string());
 
     // Create HTTP request
     let response = CanisterHttpRequest::new()
@@ -162,7 +167,7 @@ pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, 
         .add_headers(vec![
             ("Content-Type".to_string(), "application/json".to_string()),
             ("Authorization".to_string(), format!("Bearer {}", api_key)),
-            ("Idempotency-Key".to_string(), random_bytes.clone()),
+            ("Idempotency-Key".to_string(), ikey.to_string()),
         ])
         .max_response_bytes(1 * 1024 * 1024) // 1MB max response
         .cycles(30_956_296_000)// Adjust cycles as needed

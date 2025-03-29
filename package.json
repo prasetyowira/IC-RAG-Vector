@@ -1,5 +1,5 @@
 {
-  "name": "ic_rag_vec",
+  "name": "icp_vector",
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "prebuild": "npm run prebuild --workspaces --if-present",

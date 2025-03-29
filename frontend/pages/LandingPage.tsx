@@ -139,7 +139,7 @@ const LandingPage: React.FC = () => {
                   <div className="absolute -bottom-4 -left-4 h-16 w-16 bg-[#0e79b8] rounded-full shadow-lg flex items-center justify-center">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
+              </svg>
                   </div>
                 </div>
               </div>
@@ -177,19 +177,19 @@ const LandingPage: React.FC = () => {
               <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 hover:border-[#0e79b8] hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
                 <div className="w-14 h-14 bg-[#e6f2fa] rounded-xl flex items-center justify-center mb-5 shadow-md">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#0e79b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                  </svg>
-                </div>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
                 <h3 className="font-bold text-lg text-[#0e79b8] mb-2">Secure and Private</h3>
                 <p className="text-gray-600">End-to-end encryption with Internet Computer technology ensures your data remains secure and private.</p>
-              </div>
-              
+            </div>
+            
               {/* Feature 2 */}
               <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 hover:border-[#0e79b8] hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1">
                 <div className="w-14 h-14 bg-[#e6f2fa] rounded-xl flex items-center justify-center mb-5 shadow-md">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-[#0e79b8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                  </svg>
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                </svg>
                 </div>
                 <h3 className="font-bold text-lg text-[#0e79b8] mb-2">Low Storage Cost</h3>
                 <p className="text-gray-600">Our efficient vector storage optimization minimizes resource usage and keeps costs low.</p>
