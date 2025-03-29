@@ -213,7 +213,7 @@ const KnowledgeBasePage: React.FC = () => {
             <img 
               src={vectorIcpLogo} 
               alt="VectorICP Logo" 
-              className="h-10" 
+              className="h-10 md:h-16" 
             />
           </div>
           <div className="flex items-center gap-4">

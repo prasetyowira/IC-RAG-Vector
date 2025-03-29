@@ -10,6 +10,9 @@ const FILE_TYPE_OPTIONS = [
 // Flattened array of all accepted MIME types
 const ACCEPTED_FILE_TYPES = FILE_TYPE_OPTIONS.flatMap(option => option.mimeTypes);
 
+// Max file size in bytes (1MB)
+const MAX_FILE_SIZE = 1024 * 1024;
+
 // Map MIME types to simple extensions
 const MIME_TYPE_MAP: Record<string, string> = {
   'application/pdf': 'pdf',
@@ -50,7 +53,13 @@ const FileUploader: React.FC<FileUploaderProps> = ({
     
     // Check if file type is supported
     if (!ACCEPTED_FILE_TYPES.includes(selectedFile.type)) {
-      onUploadError('File type not supported. Please upload PDF, TXT, DOC, DOCX.');
+      onUploadError('File type not supported. Please upload PDF, TXT.');
+      return;
+    }
+    
+    // Check if file size is within the limit
+    if (selectedFile.size > MAX_FILE_SIZE) {
+      onUploadError(`File size exceeds the maximum limit of 1MB. Your file is ${(selectedFile.size / (1024 * 1024)).toFixed(2)}MB.`);
       return;
     }
     
@@ -191,6 +200,7 @@ const FileUploader: React.FC<FileUploaderProps> = ({
           </svg>
           <p className="text-sm font-medium text-gray-700">Drag & drop a file here or click to browse</p>
           <p className="text-xs text-gray-500 mt-1">Supported formats: PDF, TXT, DOC, DOCX</p>
+          <p className="text-xs text-gray-500 mt-1">Maximum file size: 1MB</p>
         </div>
       </div>
 
