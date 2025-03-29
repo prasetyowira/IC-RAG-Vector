@@ -151,6 +151,9 @@ pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, 
         Err(e) => return Err(format!("Failed to serialize request: {}", e)),
     };
 
+    let (random_bytes,): (Vec<u8>,) = ic_cdk::api::management_canister::main::raw_rand().await.unwrap();
+    let random_bytes = random_bytes.to_string();
+    ic_cdk::println!("idempotency_key: {}", random_bytes.clone());
 
     // Create HTTP request
     let response = CanisterHttpRequest::new()
@@ -159,6 +162,7 @@ pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, 
         .add_headers(vec![
             ("Content-Type".to_string(), "application/json".to_string()),
             ("Authorization".to_string(), format!("Bearer {}", api_key)),
+            ("Idempotency-Key".to_string(), random_bytes.clone()),
         ])
         .max_response_bytes(1 * 1024 * 1024) // 1MB max response
         .cycles(30_956_296_000)// Adjust cycles as needed
