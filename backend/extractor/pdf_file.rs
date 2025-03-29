@@ -13,7 +13,6 @@ pub fn extract_text_from_pdf(pdf_bytes: &[u8]) -> Result<String, Error> {
         let text = doc.extract_text(&[page.0]);
         full_text.push_str(text.unwrap().as_str());
     }
-    ic_cdk::println!("full_text: {}", full_text.clone().as_str());
 
     Ok(full_text)
 }

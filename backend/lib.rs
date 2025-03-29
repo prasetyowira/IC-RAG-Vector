@@ -24,8 +24,6 @@ pub struct InstallArgs {
 }
 #[ic_cdk::init]
 fn init(args: InstallArgs) {
-    ic_cdk::println!("INIT TOT");
-    ic_cdk::println!("args val: {:?}", args.clone());
     set_config_map(OPENAI_API_KEY.to_string(), args.openai_key);
 }
 
@@ -46,8 +44,6 @@ fn pre_upgrade() {
 }
 #[ic_cdk::post_upgrade]
 fn post_upgrade(args: InstallArgs) {
-    ic_cdk::println!("UPGRADE TOT");
-    ic_cdk::println!("args val: {:?}", args.clone());
     set_config_map(OPENAI_API_KEY.to_string(), args.openai_key);
 
     let memory = get_upgrades_memory();
@@ -68,7 +64,6 @@ fn post_upgrade(args: InstallArgs) {
 #[query]
 fn check_is_owner() -> bool {
     let is_owner = is_owner();
-    ic_cdk::println!("is_owner val: {}", is_owner.clone());
     is_owner
 }
 
@@ -88,15 +83,12 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
     // Check if file_type is valid, only pdf, txt, docs  are allowed. and throw FileTypeNotSupported error
     let valid_file_types = vec!["pdf", "text", "docs"];
     if !valid_file_types.contains(&file_type.as_str()) {
-        ic_cdk::println!("cek: {}", &file_type.as_str());
-        ic_cdk::println!("cek2: {}", valid_file_types.contains(&file_type.as_str()));
         return Err(Error::FileTypeNotSupported);
     }
 
     // let content = data.clone();
     // get open api key from env var
     let api_key = get_config_map_by_key(OPENAI_API_KEY.to_string()).unwrap();
-    ic_cdk::println!("api key: {}", api_key.clone());
 
     // Extract text content based on file type
     let text_content = match extract_text_from_bytebuf(&data, &file_type) {
@@ -110,22 +102,14 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
         Err(err) => return Err(Error::ModelError(err)),
     };
 
-
-    ic_cdk::println!("file_type: {}", file_type.clone());
-    ic_cdk::println!("title: {}", title.clone());
-    ic_cdk::println!("filename: {}", filename.clone());
-    ic_cdk::println!("collection_name: {}", collection_name.clone());
-
     let file_size = data.len() as u64;
     let created_at = ic_cdk::api::time() / 1_000_000;
-    ic_cdk::println!("created: {}", created_at.clone());
 
     // Insert into collection with proper error handling
     DB.with(|db| {
         let mut db = db.borrow_mut();
         let exist = db.collections.contains_key(&collection_name);
         if !exist {
-            ic_cdk::println!("col not exist");
             db.create_collection(collection_name.clone(), 1000).unwrap();
         }
         
@@ -133,9 +117,7 @@ async fn upload_file(file_type: String, title: String, filename: String, data: B
         match db.insert_into_collection(&collection_name, vec![embeddings], vec![text_content], filename.clone(), title, file_type, file_size, created_at) {
             Ok(_) => {
                 // Rebuild index
-                ic_cdk::println!("index fail");
                 db.build_index(&collection_name)?;
-                ic_cdk::println!("index success");
                 Ok(format!("Doc {} upload success!", filename))
             },
             Err(e) => Err(e),
@@ -156,8 +138,6 @@ async fn delete_document(filename: String) -> Result<String, Error> {
     let collection_name = user.to_string();
 
     DB.with(|db| {
-        ic_cdk::println!("collection_name: {}", collection_name.clone());
-        ic_cdk::println!("filename: {}", filename.clone());
         let mut db = db.borrow_mut();
         db.remove_document_from_collection(&collection_name, &filename)?;
         Ok(format!("Document '{}' successfully deleted", filename))
@@ -180,15 +160,11 @@ async fn list_documents(limit: Option<usize>, offset: Option<usize>) -> Result<V
     let offset = offset.unwrap_or(0); // Default offset of 0 (start from beginning)
 
     DB.with(|db| {
-        ic_cdk::println!("here");
         let mut db = db.borrow_mut();
 
         match db.collections.contains_key(&name.clone()){
-            true => {
-                ic_cdk::println!("collection exist");
-            },
+            true => {},
             false => {
-                ic_cdk::println!("collection not exist");
                 db.create_collection(name.clone(), 1000).unwrap();
             }
         };
@@ -197,9 +173,7 @@ async fn list_documents(limit: Option<usize>, offset: Option<usize>) -> Result<V
         
         // Apply pagination
         let total_docs = docs.len();
-        ic_cdk::println!("total_docs {}", total_docs.clone());
         if offset >= total_docs {
-            ic_cdk::println!("no document {} total {}", name.clone(), total_docs.clone());
             return Ok(vec![]); // Return empty if offset is beyond available docs
         }
 

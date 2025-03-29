@@ -50,7 +50,6 @@ impl Database {
         let mut _values: Vec<String> = vec![];
 
         for i in 0..keys.len() {
-            ic_cdk::println!("vali: {}", values[i].clone());
             let key = &keys[i];
             let point = Vector::from((*key).clone());
             points.push(point);
@@ -63,7 +62,6 @@ impl Database {
 
     pub fn build_index(&mut self, name: &String) -> Result<(), Error> {
         let collection = self.collections.get_mut(name).ok_or(Error::NotFound)?;
-        ic_cdk::println!("build index: {}", name.clone());
         collection.build_index();
         Ok(())
     }
@@ -103,16 +101,10 @@ impl Database {
     }
 
     pub fn get_docs(&mut self, index_name: &String) -> Result<Vec<DocMetadata>, Error> {
-        for (key, _) in &self.collections {
-            ic_cdk::println!("Collection Key: {}", key.clone());
-            ic_cdk::println!("idx: {}", index_name.clone());
-            ic_cdk::println!("id eq: {}", index_name.clone() == key.clone());
-        }
         let collection = match self.collections.get(index_name) {
             Some(value) => value,
             None => return Err(Error::NotFound),
         };
-        ic_cdk::println!("coli: {}", collection.metadata.count.clone());
 
         // Convert the HashMap values to a Vec
         let mut docs: Vec<DocMetadata> = collection.metadata.docs.values().cloned().collect();

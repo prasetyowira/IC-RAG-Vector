@@ -29,9 +29,7 @@ impl PartialEq for Vector {
 
 impl From<Vec<f32>> for Vector {
     fn from(value: Vec<f32>) -> Self {
-        ic_cdk::println!("from V");
         let svec = DVector::from_vec(value);
-        ic_cdk::println!("from V success");
         Vector { data: svec }
     }
 }

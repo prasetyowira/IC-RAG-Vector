@@ -153,7 +153,7 @@ pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, 
             ("Authorization".to_string(), format!("Bearer {}", api_key)),
         ])
         .max_response_bytes(1 * 1024 * 1024) // 1MB max response
-        .cycles(100_000_000_000)// Adjust cycles as needed
+        .cycles(2_000_000_000)// Adjust cycles as needed
         .payload(Some(body_json))
         .send()
         .await?;

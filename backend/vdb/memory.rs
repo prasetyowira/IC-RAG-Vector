@@ -32,7 +32,6 @@ pub fn set_owner(owner: Principal) {
 }
 pub fn is_owner() -> bool {
     let caller = ic_cdk::caller();
-    ic_cdk::println!("caller: {}", caller.clone());
     OWNER.with(|owner| match *owner.borrow() {
         Some(principal) => principal == caller,
         None => false,
