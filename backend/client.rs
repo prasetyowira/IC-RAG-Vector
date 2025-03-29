@@ -25,6 +25,13 @@ impl Default for CanisterHttpRequest {
     }
 }
 
+/// Checks if the canister is supporting IPv4 exchanges
+pub(crate) fn is_ipv4_support_available() -> bool {
+    let support = cfg!(feature = "ipv4-support");
+    ic_cdk::println!("IPv4 support: {}", support.clone());
+    support
+}
+
 impl CanisterHttpRequest {
     /// Creates a new request to be built up by having
     pub fn new() -> Self {
@@ -132,6 +139,7 @@ struct EmbeddingData {
 
 /// Generates embeddings from text content using OpenAI's API
 pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, String> {
+    is_ipv4_support_available();
     // Prepare the request body
     let request_body = OpenAIEmbeddingRequest {
         model: "text-embedding-3-small".to_string(),
@@ -146,14 +154,14 @@ pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, 
 
     // Create HTTP request
     let response = CanisterHttpRequest::new()
-        .url("https://api.openai.com/v1/embeddings")
+        .url("https://openai.ariwira.me/v1/embeddings")
         .method(HttpMethod::POST)
         .add_headers(vec![
             ("Content-Type".to_string(), "application/json".to_string()),
             ("Authorization".to_string(), format!("Bearer {}", api_key)),
         ])
         .max_response_bytes(1 * 1024 * 1024) // 1MB max response
-        .cycles(2_000_000_000)// Adjust cycles as needed
+        .cycles(30_956_296_000)// Adjust cycles as needed
         .payload(Some(body_json))
         .send()
         .await?;
