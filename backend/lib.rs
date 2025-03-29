@@ -1,8 +1,10 @@
+use std::env::args;
 use candid::{CandidType, Principal};
 mod vdb;
 mod client;
 mod extractor;
 
+use ic_cdk::api::management_canister::http_request::{HttpResponse, TransformArgs};
 use ic_cdk_macros::{query, update};
 use ic_stable_structures::Storable;
 use ic_stable_structures::writer::Writer;
@@ -60,6 +62,19 @@ fn post_upgrade(args: InstallArgs) {
     let state = ciborium::de::from_reader(&*state_bytes).expect("failed to decode state");
     DB.with(|s| *s.borrow_mut() = state);
 }
+
+#[query]
+fn transform_exchange_http_response(args: TransformArgs) -> HttpResponse {
+    let mut sanitized = args.response;
+    ic_cdk::println!("body {:?}", sanitized.body);
+    ic_cdk::println!("header {:?}", sanitized.headers);
+    ic_cdk::println!("status {:?}", sanitized.status);
+
+    // Strip out the headers as these will commonly cause an error to occur.
+    sanitized.headers = vec![];
+    sanitized
+}
+
 
 #[query]
 fn check_is_owner() -> bool {

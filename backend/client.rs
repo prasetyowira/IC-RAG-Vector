@@ -160,6 +160,8 @@ pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, 
     let ikey = generate_icp_uuid().await;
     ic_cdk::println!("idempotency_key: {}", ikey.clone().to_string());
 
+    let context = ikey.clone();
+
     // Create HTTP request
     let response = CanisterHttpRequest::new()
         .url("https://openai.ariwira.me/v1/embeddings")
@@ -172,6 +174,7 @@ pub async fn generate_embeddings(text: &str, api_key: &str) -> Result<Vec<f32>, 
         .max_response_bytes(1 * 1024 * 1024) // 1MB max response
         .cycles(30_956_296_000)// Adjust cycles as needed
         .payload(Some(body_json))
+        .transform_context("transform_exchange_http_response", context.as_bytes().to_vec())
         .send()
         .await?;
 
