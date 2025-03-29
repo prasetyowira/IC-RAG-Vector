@@ -174,7 +174,7 @@ This project requires an OpenAI API key to generate embeddings for documents. Yo
 ```json
 "backend": {
   "type": "rust",
-  "package": "ic_rag_vec_backend",
+  "package": "icp_vector_backend",
   "candid": "src/backend/backend.did",
   "init_arg": "(record {openApiKeys = \"insert your openai api key here\"})"
 },
